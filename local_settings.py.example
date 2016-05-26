@@ -1,0 +1,22 @@
+# -*- coding: utf-8 -*-
+from __future__ import absolute_import
+
+import os
+
+os.environ['REDIS_URL'] = 'redis://192.168.99.100:6379/4'
+os.environ['CELERY_BROKER_URL'] = os.environ['CELERY_RESULT_BACKEND_URL'] = 'redis://192.168.99.100:6379/4'
+
+os.environ['FBBOT_PAGE_ACCESS_TOKEN'] = '...'
+os.environ['FBBOT_VERIFY_TOKEN'] = '...'
+
+# os.environ['DATABASE_URL'] = 'sqlite://db.sqlite3'
+
+from clikhome_fbbot.conf.base_settings import *
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+    }
+}
+DEBUG = True
