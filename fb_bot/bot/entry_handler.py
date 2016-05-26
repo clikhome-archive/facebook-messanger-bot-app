@@ -2,12 +2,11 @@
 from __future__ import absolute_import
 
 import logging
-import sys
-import traceback
 
 from django.conf import settings
 from hotqueue import HotQueue
 from redis.connection import ConnectionPool
+from raven.contrib.django.raven_compat.models import client as raven_client
 
 from fb_bot.bot.chat_lock import ChatLock
 from fb_bot.bot.chat_session import ChatSession
@@ -34,10 +33,9 @@ class EntryHandler(object):
                 try:
                     sr = session.search_request
                     cb(msg_obj, sr)
-                except:
-                    exc_info = sys.exc_info()
-                    traceback.print_exception(*exc_info)
-                    log.error("Error processing %s" % text)
+                except Exception, e:
+                    raven_client.captureException()
+                    log.exception(e, dict(cb=cb, text=text, user_id=msg_obj.sender_id))
 
     def _get_receivers(self, text):
         has_matching = False
@@ -71,7 +69,7 @@ class EntryHandler(object):
                     has_entry = False
                     for entry in q.consume(timeout=timeout):
                         has_entry = True
-                        log.debug('!!!!Get from %d HotQueue %r - %s' % (handled_count, entry, entry._message['text']))
+                        log.debug('!!!!Get from %d HotQueue %r - %r' % (handled_count, entry, entry._message['text']))
                         self._handle_message(entry, session)
                         handled_count += 1
                     if not has_entry:

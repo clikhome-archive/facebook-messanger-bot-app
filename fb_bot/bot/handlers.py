@@ -85,6 +85,11 @@ def default_handler(message, sr):
 def hey(message, sr):
     message.reply('eggplant')
 
+
+@respond_to('^secret500$', re.IGNORECASE)
+def secret500(message, sr):
+    message.reply('%s' % (1/0))
+
 if settings.DEBUG:
     # @respond_to('^test$', re.IGNORECASE)
     # def test(message, sr):

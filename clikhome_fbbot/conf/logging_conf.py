@@ -49,9 +49,8 @@ LOGGING = {
             'level': 'DEBUG',
         },
         'clikhome_fbbot': {
-            'handlers': ['console', 'sentry'],
+            'handlers': ['sentry'],
             'level': 'WARNING',
-            'propagate': True,
         },
         'django.request': {
             'handlers': ['console'],
