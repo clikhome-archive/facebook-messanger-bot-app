@@ -128,6 +128,24 @@ if os.environ.get('SENTRY_DSN', None):
         # 'release': raven.fetch_git_sha(root()),
     }
 
+# Celery
+BROKER_URL = os.getenv('CELERY_BROKER_URL', None)
+CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND_URL', None)
+
+CELERY_TASK_RESULT_EXPIRES = 600
+CELERY_ACCEPT_CONTENT = ['pickle', 'json', 'msgpack', 'yaml']
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_SEND_EVENTS = True
+
+CELERYD_LOG_FORMAT = """
+    [%(asctime)s: %(levelname)s/%(processName)s/%(threadName)s] %(message)s
+""".strip()
+
+if os.environ.get('DYNO', False):
+    # Don't print %(asctime)s on Heroku environ
+    CELERYD_LOG_FORMAT = """
+        [%(levelname)s/%(processName)s/%(threadName)s] %(message)s
+    """.strip()
 # Facebook Messenger bot
 FBBOT_PAGE_ACCESS_TOKEN = os.getenv('FBBOT_PAGE_ACCESS_TOKEN', None)
 FBBOT_VERIFY_TOKEN = os.getenv('FBBOT_VERIFY_TOKEN', None)
