@@ -69,7 +69,7 @@ def restart(message, sr):
 #         assert sr.current_question.param_key == 'location_bbox'
 #         _set_answer(message, sr)
 
-@respond_to('^Hi|Hello|ClikHome$', re.IGNORECASE)
+@respond_to('^Hi|Hello|ClikHome|help$', re.IGNORECASE)
 def hi(message, sr):
     sr.reset_questions()
     message.reply(THE_GREETING)
@@ -83,7 +83,8 @@ def default_handler(message, sr):
 
 @respond_to('^hey$', re.IGNORECASE)
 def hey(message, sr):
-    message.reply('eggplant')
+    # eggplant
+    message.reply(u'\U0001F346')
 
 
 @respond_to('^secret500$', re.IGNORECASE)
