@@ -2,13 +2,15 @@
 from __future__ import absolute_import
 import os
 from celery import Celery
+from django.conf import settings  # noqa
 
 # set the default Django settings module for the 'celery' program.
-if not os.environ.get('DJANGO_SETTINGS_MODULE', False):
-    print 'WARN: DJANGO_SETTINGS_MODULE env is not set'
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'local_settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'clikhome_fbbot.settings')
+# os.environ.setdefault('DJANGO_CONFIGURATION', 'Dev')
 
-from django.conf import settings  # noqa
+
+import configurations
+configurations.setup()
 
 app = Celery('clikhome_fbbot')
 

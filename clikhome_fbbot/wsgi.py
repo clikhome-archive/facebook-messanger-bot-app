@@ -11,6 +11,7 @@ import os
 
 from django.core.wsgi import get_wsgi_application
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "local_settings")
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'clikhome_fbbot.settings')
+# os.environ.setdefault('DJANGO_CONFIGURATION', 'Dev')
 
 application = get_wsgi_application()
