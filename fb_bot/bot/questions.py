@@ -2,7 +2,7 @@
 from __future__ import absolute_import
 import re
 
-from fb_bot import shared_tasks
+from clikhome_fbbot.utils import geolocator
 
 
 class ImmediateReply(Exception):
@@ -42,7 +42,7 @@ class Question(object):
             raise BadAnswer(self.answer_bad_message % dict(answer=answer))
 
         if self.param_key == 'location_bbox':
-            bbox = shared_tasks.geocode_location_to_bbox(answer)
+            bbox = geolocator.geocode_location_to_bbox(answer)
             if bbox:
                 self.param_value = bbox
                 self.answer = answer

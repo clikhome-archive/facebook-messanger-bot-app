@@ -155,6 +155,7 @@ class AppsCommon(Configuration):
     # Facebook Messenger bot
     FBBOT_PAGE_ACCESS_TOKEN = EnvVal('FBBOT_PAGE_ACCESS_TOKEN')
     FBBOT_VERIFY_TOKEN = EnvVal('FBBOT_VERIFY_TOKEN')
+    GOOGLE_GEOCODER_API_KEY = EnvVal('GOOGLE_GEOCODER_API_KEY')
 
 
 class Common(DjangoCommon, CeleryCommon, AppsCommon):

@@ -24,6 +24,7 @@ ipaddress==1.0.16
 ipython==4.2.0
 ipython-genutils==0.1.0
 kombu==3.0.35
+-e git+https://heroku-clikhome:HRzOTVyU0laV0tIMnA2NFZiR3VQMj@github.com/ClikHome/clikhome-shared.git@master#egg=clikhome-shared
 -e git+https://github.com/geeknam/messengerbot.git@1786695ff43034c3d548e5fd222661480dd4bbb7#egg=messengerbot
 ndg-httpsclient==0.4.0
 pathlib2==2.1.0

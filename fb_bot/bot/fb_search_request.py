@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import logging
 import random
 
+from clikhome_shared.engine.questions import get_questions_list
 from fb_bot.bot.questions import Question, EngineQuestion, BadAnswer, ImmediateReply
 from fb_bot import shared_tasks
 
@@ -38,7 +39,7 @@ class FbSearchRequest(object):
             else:
                 q_kwargs['single'] += 1
 
-        engine_questions = shared_tasks.get_engine_questions_list(random=0, **q_kwargs)
+        engine_questions = get_questions_list(random=0, **q_kwargs)
         for i, q in enumerate(self.questions_unanswered_list):
             if q is EngineQuestion:
                 self.questions_unanswered_list[i] = EngineQuestion(engine_questions.pop(), 'engine-question-%s' % i)
