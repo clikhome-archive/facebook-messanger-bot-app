@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 
+from django.utils.text import Truncator
 from messengerbot import attachments, elements, templates
 
 
@@ -8,8 +9,8 @@ def get_results_attachment(listings_data_items, more_url):
     tpl_elements = list()
     for listing_d in listings_data_items:
         element_kwargs = dict(
-            title=listing_d['title'],
-            subtitle=listing_d['fmt_address'],
+            title=Truncator(listing_d['title']).chars(44),
+            subtitle=Truncator(listing_d['fmt_address']).chars(79),
             # item_url=more_url,
             buttons=[
                 elements.WebUrlButton(
