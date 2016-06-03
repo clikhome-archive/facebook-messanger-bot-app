@@ -12,13 +12,13 @@ log = logging.getLogger('clikhome_fbbot.%s' % __name__)
 
 class FbSearchRequest(object):
 
-    def __init__(self, user_verbose_id):
-        self.user_verbose_id = user_verbose_id
+    def __init__(self, user_id):
+        self.user_id = user_id
         self.params = {}
         self.questions_unanswered_list = list()
         self.questions_answered_list = list()
         self.current_question = None
-        self.is_searching = False
+        self.is_waiting_for_results = False
         self.location_fmt_address = None
         self.reset_questions()
 
@@ -69,29 +69,26 @@ class FbSearchRequest(object):
         except BadAnswer, e:
             raise ImmediateReply(e.message)
 
-    def get_search_result(self):
-        try:
-            self.is_searching = True
-            bbox = self.params['location_bbox']
-            assert self.engine_user_answers
-            filter_kwargs = dict(
-                rent__lte=self.params['rent__lte'],
-                unit__rental_complex__address__coords__contained=bbox.to_geom(),
-                unit__bedrooms=self.params['bedrooms'],
-                is_listed=True,
-            )
-            verbose_kwargs = filter_kwargs.copy()
-            verbose_kwargs['unit__rental_complex__address__coords__contained'] = '%s' % verbose_kwargs['unit__rental_complex__address__coords__contained']
-            self.log('Query filter %r' % verbose_kwargs)
-            more_url, listings = shared_tasks.listings_search(
-                    bbox_as_list=bbox.as_list,
-                    filter_kwargs=filter_kwargs,
-                    engine_user_answers=self.engine_user_answers,
-                    search_location_fmt_address=self.location_fmt_address
-            )
-            return more_url, listings
-        finally:
-            self.is_searching = False
+    def request_search_results(self):
+        bbox = self.params['location_bbox']
+        assert self.engine_user_answers
+        filter_kwargs = dict(
+            rent__lte=self.params['rent__lte'],
+            unit__rental_complex__address__coords__contained=bbox.to_geom(),
+            unit__bedrooms=self.params['bedrooms'],
+            is_listed=True,
+        )
+        verbose_kwargs = filter_kwargs.copy()
+        verbose_kwargs['unit__rental_complex__address__coords__contained'] = '%s' % verbose_kwargs['unit__rental_complex__address__coords__contained']
+        self.log('Query filter %r' % verbose_kwargs)
+        shared_tasks.request_listings_search(
+            user_id=self.user_id,
+            bbox_as_list=bbox.as_list,
+            filter_kwargs=filter_kwargs,
+            engine_user_answers=self.engine_user_answers,
+            search_location_fmt_address=self.location_fmt_address
+        )
+        self.is_waiting_for_results = True
 
     @property
     def engine_user_answers(self):
@@ -109,4 +106,4 @@ class FbSearchRequest(object):
         log.debug('%s: %s current_question: %r' % (self, msg, self.current_question))
 
     def __repr__(self):
-        return '<FbSearchRequest u=%s>' % self.user_verbose_id
+        return '<FbSearchRequest u=%s>' % self.user_id

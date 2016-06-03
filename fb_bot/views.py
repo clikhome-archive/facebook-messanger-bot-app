@@ -25,6 +25,10 @@ log = logging.getLogger('clikhome_fbbot.%s' % __name__)
 # webhooks.WebhookMessaging.__repr__ = webhook_messaging__repr__
 
 
+def index(request):
+    return HttpResponse('OK')
+
+
 class BotView(generic.View):
     handle_messages_async = True
 

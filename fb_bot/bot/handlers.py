@@ -29,22 +29,26 @@ def _set_answer(message, sr):
         message.reply('Bad command "{}"'.format(text))
 
 
-def send_results(message, sr):
-    more_url, listings = sr.get_search_result()
-    if listings:
-        attachment = get_results_attachment(listings, more_url)
-        message.attachment_reply(attachment)
-        log.debug('Return results for %s' % sr)
-    else:
-        log.debug('No results for %s' % sr)
-        message.reply("Sorry, we can't find any listing with this criteria.")
+def send_results(user_id, more_url, listings):
+    from fb_bot.bot.chat_session import ChatSession
+    from fb_bot.bot.message import attachment_reply, reply
+
+    with ChatSession(user_id) as session:
+        sr = session.search_request
+        sr.is_waiting_for_results = False
+        if listings:
+            attachment = get_results_attachment(listings, more_url)
+            attachment_reply(user_id, attachment)
+            log.debug('Return results for %s' % sr)
+        else:
+            log.debug('No results for %s' % sr)
+            reply(user_id, "Sorry, we can't find any listing with this criteria.")
 
 
 def ask_question(message, sr, question_text=None):
     q = sr.next_question()
     if q is None:
-        send_results(message, sr)
-        sr.reset_questions()
+        sr.request_search_results()
     else:
         if question_text:
             message.reply(question_text)
@@ -81,24 +85,59 @@ def default_handler(message, sr):
     # message.reply('Echo %r' % message.text)
 
 
-@respond_to('^hey$', re.IGNORECASE)
+@respond_to('^!hey$', re.IGNORECASE)
 def hey(message, sr):
     # eggplant
     message.reply(u'\U0001F346')
 
 
-@respond_to('^secret500$', re.IGNORECASE)
+@respond_to('^!secret500$', re.IGNORECASE)
 def secret500(message, sr):
     message.reply('%s' % (1/0))
 
-if settings.DEBUG:
-    # @respond_to('^test$', re.IGNORECASE)
-    # def test(message, sr):
-    #     from properties.models import Listing
-    #     attachment = get_results_attachment(Listing.objects.filter(is_listed=True)[0:5])
-    #     message.attachment_reply(attachment)
 
-    @respond_to('^show_results$', re.IGNORECASE)
-    def show_results(message, sr):
-        send_results(message, sr)
+@respond_to('^@show_results$', re.IGNORECASE)
+def admin_show_results(message, sr):
+    sr.request_search_results()
+
+
+@respond_to('^@test_results$', re.IGNORECASE)
+def admin_test_results(message, sr):
+    sr.reset_questions()
+    q = sr.next_question()
+    assert 'location_bbox' in q.param_key
+    sr.set_answer('New York')
+    q = sr.next_question()
+    assert 'bedrooms' in q.param_key
+    sr.set_answer('1')
+
+    q = sr.next_question()
+    assert 'rent__lte' in q.param_key
+    sr.set_answer('9000')
+
+    q = sr.next_question()
+    sr.set_answer('no')
+
+    q = sr.next_question()
+    sr.set_answer('no')
+
+    q = sr.next_question()
+    sr.set_answer('no')
+    sr.request_search_results()
+
+
+@respond_to('^@sessions_keys$', re.IGNORECASE)
+def admin_sessions_keys(message, sr):
+    items = list()
+    c = message.session.cache
+    for key in c.keys('*'):
+        ttl = c.ttl(key)
+        data = c.get(key, {})
+        session_params = repr({})
+        session_sr = data.get('search_request', None)
+        if session_sr:
+            session_params = repr(session_sr.params)
+        items.append('%s ttl=%s session_params=%r' % (key, ttl, session_params))
+    text = '\n'.join(items)
+    message.reply(text)
 

@@ -18,6 +18,8 @@ log = logging.getLogger('clikhome_fbbot.%s' % __name__)
 
 
 class EntryHandler(object):
+    redis_url = settings.REDIS_URL
+    admin_ids = map(int, settings.FBBOT_ADMINS_IDS)
 
     def __init__(self):
         from fb_bot.bot import handlers
@@ -28,10 +30,20 @@ class EntryHandler(object):
         text = wh_msg._message['text']
         msg_obj = Message(wh_msg, session)
         for cb, _ in self._get_receivers(msg_obj.text):
-            cb = cb or self.default_handler
+            if cb:
+                if msg_obj.text.startswith('@') and int(msg_obj.sender_id) not in self.admin_ids:
+                    log.warn('Deny access to admin command %r for %r' % (msg_obj.text, msg_obj.sender_id))
+                    msg_obj.reply('Access denied for %r' % cb.__name__)
+                    continue
+            else:
+                cb = self.default_handler
+
             with msg_obj.session as session:
                 try:
                     sr = session.search_request
+                    if sr.is_waiting_for_results and not msg_obj.text.startswith(('@', '!')):
+                        log.warn('Drop message %r when is_waiting_for_results=True' % msg_obj)
+                        continue
                     cb(msg_obj, sr)
                 except Exception, e:
                     raven_client.captureException()
@@ -59,7 +71,7 @@ class EntryHandler(object):
 
         with chat_lock as _:
             timeout = 3
-            redis_kwargs = dict(connection_pool=ConnectionPool.from_url(settings.REDIS_URL))
+            redis_kwargs = dict(connection_pool=ConnectionPool.from_url(self.redis_url))
 
             # TODO: use Kombu exclusive queue?
             # http://docs.celeryproject.org/projects/kombu/en/latest/reference/kombu.html#kombu.Queue.exclusive
@@ -80,10 +92,10 @@ class EntryHandler(object):
         with ChatSession(sender_id) as session:
             self._handle_message(entry, session)
 
-    @staticmethod
-    def add_to_queue(message_entries, async=True):
+    @classmethod
+    def add_to_queue(cls, message_entries, async=True):
         if async:
-            connection_pool = ConnectionPool.from_url(settings.REDIS_URL)
+            connection_pool = ConnectionPool.from_url(cls.redis_url)
             redis_kwargs = dict(connection_pool=connection_pool)
             queues = dict()
 

@@ -155,6 +155,13 @@ class AppsCommon(Configuration):
     # Facebook Messenger bot
     FBBOT_PAGE_ACCESS_TOKEN = EnvVal('FBBOT_PAGE_ACCESS_TOKEN')
     FBBOT_VERIFY_TOKEN = EnvVal('FBBOT_VERIFY_TOKEN')
+    FBBOT_ADMINS_IDS = values.Value(
+        environ_name='FBBOT_ADMINS_IDS',
+        environ_required=False,
+        environ_prefix=None,
+        late_binding=True,
+        default=['1595878670725308']
+    )
     GOOGLE_GEOCODER_API_KEY = EnvVal('GOOGLE_GEOCODER_API_KEY')
 
 

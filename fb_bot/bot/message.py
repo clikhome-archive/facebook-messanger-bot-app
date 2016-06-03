@@ -10,6 +10,22 @@ messenger = MessengerClient(access_token=settings.FBBOT_PAGE_ACCESS_TOKEN)
 log = logging.getLogger('clikhome_fbbot.%s' % __name__)
 
 
+def attachment_reply(recipient, attachment):
+    if not isinstance(recipient, messages.Recipient):
+        recipient = messages.Recipient(recipient_id=recipient)
+    message = messages.Message(attachment=attachment)
+    request = messages.MessageRequest(recipient, message)
+    messenger.send(request)
+
+
+def reply(recipient, text):
+    if not isinstance(recipient, messages.Recipient):
+        recipient = messages.Recipient(recipient_id=recipient)
+    message = messages.Message(text=text)
+    request = messages.MessageRequest(recipient, message)
+    messenger.send(request)
+
+
 class Message(object):
 
     def __init__(self, wh_msg, session):
@@ -39,15 +55,7 @@ class Message(object):
         self.session = session
 
     def reply(self, text):
-        # recipient = messages.Recipient(recipient_id=self.sender_id)
-        message = messages.Message(text=text)
-        request = messages.MessageRequest(self.wh_msg.recipient, message)
-        messenger.send(request)
-
-    def attachment_reply(self, attachment):
-        message = messages.Message(attachment=attachment)
-        request = messages.MessageRequest(self.wh_msg.recipient, message)
-        messenger.send(request)
+        reply(self.wh_msg.recipient, text)
 
     @property
     def text(self):
@@ -57,6 +65,8 @@ class Message(object):
     def sender_id(self):
         return self.wh_msg.sender.recipient_id
 
+    def __unicode__(self):
+        return '%r from %s' % (self.text, self.sender_id)
     # @property
     # def session(self):
     #     if not self._session:
