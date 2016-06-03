@@ -162,6 +162,7 @@ class AppsCommon(Configuration):
         late_binding=True,
         default=['1595878670725308']
     )
+    FBBOT_MSG_EXPIRE = 10
     GOOGLE_GEOCODER_API_KEY = EnvVal('GOOGLE_GEOCODER_API_KEY')
 
 

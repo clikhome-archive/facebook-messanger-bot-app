@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
-
+import datetime
 import logging
 
 from django.conf import settings
@@ -25,10 +25,20 @@ class EntryHandler(object):
         from fb_bot.bot import handlers
         self.default_handler = handlers.default_handler
 
-    def _handle_message(self, wh_msg, session):
-        assert wh_msg.is_message
-        text = wh_msg._message['text']
-        msg_obj = Message(wh_msg, session)
+    def _handle_message(self, msg, session):
+        """
+        :type msg: WebhookMessaging
+        """
+        assert msg.is_message
+
+        now = datetime.datetime.utcnow()
+        delta = (now - msg.timestamp)
+        if delta.seconds >= settings.FBBOT_MSG_EXPIRE:
+            log.warn('Drop expired message, delta=%s' % delta.seconds)
+            return
+
+        text = msg._message['text']
+        msg_obj = Message(msg, session)
         for cb, _ in self._get_receivers(msg_obj.text):
             if cb:
                 if msg_obj.text.startswith('@') and int(msg_obj.sender_id) not in self.admin_ids:

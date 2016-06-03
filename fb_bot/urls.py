@@ -6,5 +6,6 @@ from fb_bot.views import BotView
 
 urlpatterns = [
     url(r'^$', 'fb_bot.views.index'),
+    url(r'^secret500/?$', 'fb_bot.views.secret500'),
     url(r'^webhook/?$', BotView.as_view())
 ]

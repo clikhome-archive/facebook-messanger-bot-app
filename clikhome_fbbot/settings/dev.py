@@ -7,6 +7,7 @@ from .common import Common, EnvVal
 
 class Dev(Common):
     DEBUG = True
+    DEBUG_PROPAGATE_EXCEPTIONS = True
     DATABASES = values.DatabaseURLValue('sqlite://db.sqlite3')
     REDIS_URL = EnvVal('REDIS_URL')
 

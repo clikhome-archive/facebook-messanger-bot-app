@@ -29,6 +29,11 @@ def index(request):
     return HttpResponse('OK')
 
 
+def secret500(request):
+    1/0
+    raise Exception('secret500')
+
+
 class BotView(generic.View):
     handle_messages_async = True
 
