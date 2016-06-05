@@ -51,9 +51,9 @@ class EntryHandler(object):
             with msg_obj.session as session:
                 try:
                     sr = session.search_request
-                    if sr.is_waiting_for_results and not msg_obj.text.startswith(('@', '!')):
-                        log.warn('Drop message %r when is_waiting_for_results=True' % msg_obj)
-                        continue
+                    # if sr.is_waiting_for_results and not msg_obj.text.startswith(('@', '!')):
+                    #     log.warn('Drop message %r when is_waiting_for_results=True' % msg_obj)
+                    #     continue
                     cb(msg_obj, sr)
                 except Exception, e:
                     raven_client.captureException()
