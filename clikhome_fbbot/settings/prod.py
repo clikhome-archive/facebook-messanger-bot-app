@@ -7,7 +7,7 @@ from .common import Common, EnvVal
 class Prod(Common):
     DEBUG = False
 
-    BROKER_URL = EnvVal('REDISCLOUD_URL')
+    BROKER_URL = EnvVal('CLOUDAMQP_URL')
     CELERY_RESULT_BACKEND = EnvVal('REDISCLOUD_URL')
     REDIS_URL = EnvVal('REDISCLOUD_URL')
 
