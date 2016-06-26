@@ -42,6 +42,7 @@ class Question(object):
             raise BadAnswer(self.answer_bad_message % dict(answer=answer))
 
         if self.param_key == 'location_bbox':
+            answer = re.sub(r'^to\s+', '', answer, 1, re.IGNORECASE)
             bbox = geolocator.geocode_location_to_bbox(answer)
             if bbox:
                 self.param_value = bbox
