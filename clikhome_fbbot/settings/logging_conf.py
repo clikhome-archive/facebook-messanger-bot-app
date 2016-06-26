@@ -13,10 +13,6 @@ LOGGING = {
         },
     },
     'handlers': {
-        'null': {
-            'level': 'DEBUG',
-            'class': 'django.utils.log.NullHandler',
-        },
         'console': {
             'class': 'logging.StreamHandler',
             'formatter': 'verbose'
@@ -24,7 +20,7 @@ LOGGING = {
         'sentry': {
             'level': 'ERROR',
             'class': 'raven.contrib.django.raven_compat.handlers.SentryHandler',
-            # 'tags': {'custom-tag': 'x'},
+            'tags': {'app': 'fb-bot-app'},
         },
     },
     'loggers': {

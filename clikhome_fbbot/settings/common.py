@@ -110,6 +110,7 @@ class DjangoCommon(Configuration):
         if os.environ.get('SENTRY_DSN', None):
             return {
                 'dsn': os.environ.get('SENTRY_DSN'),
+                'tags': {'app': 'fb-bot-app'},
                 # If you are using git, you can also automatically configure the
                 # release based on the git info.
                 # 'release': raven.fetch_git_sha(root()),
@@ -118,7 +119,7 @@ class DjangoCommon(Configuration):
             return {}
 
     @property
-    def LOGGIN(self):
+    def LOGGING(self):
         from .logging_conf import LOGGING
         return LOGGING
 
