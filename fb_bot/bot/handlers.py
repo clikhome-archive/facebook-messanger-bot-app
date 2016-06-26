@@ -26,7 +26,7 @@ def _set_answer(message, sr):
         else:
             ask_question(message, sr)
     else:
-        message.reply('Bad command "{}"'.format(text))
+        message.reply(u'Bad command "{}"'.format(text))
 
 
 def send_results(user_id, more_url, listings):
