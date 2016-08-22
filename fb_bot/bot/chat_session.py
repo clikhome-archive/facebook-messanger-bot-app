@@ -2,21 +2,25 @@
 from __future__ import absolute_import
 import logging
 
+from django.conf import settings
 from django.core.cache import caches
-
+from facebook import GraphAPI
 from fb_bot.bot.fb_search_request import FbSearchRequest
 
 log = logging.getLogger('clikhome_fbbot.%s' % __name__)
+CACHE_PREFIX = 'fb_bot-v2'
 
 
 class ChatSession(object):
+    graph_api_class = GraphAPI
 
     def __init__(self, user_id):
         self.user_id = user_id
-        self.lock_key = 'fb_bot-lock-chat-with-%s' % user_id
-        self.cache_key = 'fb_bot-chat-session-%s' % user_id
+        self.lock_key = CACHE_PREFIX + '-lock-chat-with-%s' % user_id
+        self.cache_key = CACHE_PREFIX + '-chat-session-%s' % user_id
         self.cache = caches['default']
         self.cache_timeout = 3600
+        self.graph = GraphAPI(settings.FBBOT_PAGE_ACCESS_TOKEN)
         self.data = dict()
         self._lock = None
 
@@ -28,6 +32,9 @@ class ChatSession(object):
         self.data = self.cache.get(self.cache_key, dict())
         if not self.data:
             log.info('Start new chat session for u=%s' % self.user_id)
+
+        if not self.data.get('user_profile', None):
+            self.data['user_profile'] = self.graph.get(str(self.user_id))
 
     @property
     def search_request(self):

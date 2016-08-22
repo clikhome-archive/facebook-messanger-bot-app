@@ -62,6 +62,13 @@ class Message(object):
         return self.wh_msg._message['text']
 
     @property
+    def sender_first_name(self):
+        try:
+            return self.session.data['user_profile']['name'].split(' ', 1)[0]
+        except Exception:
+            return self.session.data['user_profile']['name']
+
+    @property
     def sender_id(self):
         return self.wh_msg.sender.recipient_id
 

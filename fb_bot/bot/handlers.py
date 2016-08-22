@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import logging
 import re
 
@@ -11,7 +11,7 @@ from fb_bot.bot.utils import get_results_attachment
 
 log = logging.getLogger('clikhome_fbbot.%s' % __name__)
 
-THE_GREETING = 'Hello, I am your real-estate advisor. Where do you want to move?'
+THE_GREETING = 'Hi {sender_first_name}! This is Mary with Apartment Ocean. How are you?'
 
 
 def _set_answer(message, sr):
@@ -59,7 +59,8 @@ def ask_question(message, sr, question_text=None):
 @respond_to('^reset|again|restart$', re.IGNORECASE)
 def restart(message, sr):
     sr.reset_questions()
-    ask_question(message, sr, question_text=THE_GREETING)
+    greetings = THE_GREETING.format(sender_first_name=message.sender_first_name)
+    ask_question(message, sr, question_text=greetings)
 
 
 # @respond_to('^I want to move to (.+)$', re.IGNORECASE)
@@ -76,7 +77,8 @@ def restart(message, sr):
 @respond_to('^Hi|Hello|ClikHome|help$', re.IGNORECASE)
 def hi(message, sr):
     sr.reset_questions()
-    message.reply(THE_GREETING)
+    greetings = THE_GREETING.format(sender_first_name=message.sender_first_name)
+    message.reply(greetings)
     ask_question(message, sr)
 
 

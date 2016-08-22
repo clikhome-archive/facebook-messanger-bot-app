@@ -1,0 +1,13 @@
+machine:
+  python:
+    version: 2.7.11
+
+dependencies:
+  pre:
+    - pip install -U pip
+    - pip install setuptools==21.2.1
+    - pip install -r ./requirements.txt
+    - pip install -r ./tests/requirements.txt
+test:
+  override:
+    - pytest tests
