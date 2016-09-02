@@ -1,41 +1,47 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
+import os
 import unittest
+import json
+import django
 
 from clikhome_shared.utils.bbox import Bbox
 from django.test.utils import override_settings
-import os
 # from django.test import TransactionTestCase
 from messengerbot import MessengerClient
 from mock import patch, MagicMock, Mock
 from facebook import GraphAPI
 
+from tests.utils import BaseTestCase
 
-class FbBotTest(unittest.TestCase):
+
+class FbBotTest(BaseTestCase):
 
     def setUp(self):
-        # from tests.setting_test import Test
-        os.environ['DJANGO_CONFIGURATION'] = 'Test'
-        os.environ['DJANGO_SETTINGS_MODULE'] = 'clikhome_fbbot.settings'
-        # os.environ['DJANGO_SETTINGS_MODULE'] = 'tests.settings'
-        # from configurations import importer
-        # importer.installed = True
+        super(FbBotTest, self).setUp()
 
-        import django
-        django.setup()
-
-        import json
         with open(os.path.join(os.path.dirname(__file__), 'message_entry.json'), 'r') as fp:
             self.message_entry = json.load(fp)
 
-    @patch.object(MessengerClient, 'send')
-    @patch.object(GraphAPI, 'get')
-    def test_greetings(self, mock_graph_get, mock_messenger_client_send):
-        mock_graph_get.return_value = {
+        from clikhome_shared.utils.geocode import Geolocator
+
+        self.mock_geolocator = patch.object(Geolocator, 'geocode_location_to_bbox').start()
+        self.mock_geolocator.return_value = Bbox(**{
+            'formatted_address': 'Iowa, USA',
+            'ne_lng': -90.140061,
+            'sw_lat': 40.375437,
+            'sw_lng': -96.639535,
+            'ne_lat': 43.5011961
+        })
+
+        self.mock_graph_get = patch.object(GraphAPI, 'get').start()
+        self.mock_graph_get.return_value = {
             u'name': u'\u0410\u043b\u0435\u043a\u0441\u0435\u0439 \u041a\u043e\u0440\u043e\u0431\u043a\u043e\u0432',
             u'id': u'100009095718696'
         }
 
+    @patch.object(MessengerClient, 'send')
+    def test_greetings(self, mock_messenger_client_send):
         from fb_bot.bot.chat_session import ChatSession
         from fb_bot.bot.message import Message
         from fb_bot.bot import handlers
@@ -54,35 +60,75 @@ class FbBotTest(unittest.TestCase):
                 assert message.message.text == fmt_greetings
             mock_messenger_client_send.side_effect = send_side_effect
             handlers.hi(message, session.search_request)
-        mock_messenger_client_send.assert_called_once()
+            mock_messenger_client_send.assert_called_once()
+
+    def test_questions(self):
+        from fb_bot.bot.fb_search_request import FbSearchRequest
+        from fb_bot.bot import questions
+
+        sr = FbSearchRequest(100009095718696)
+        q = sr.next_question()
+        self.assertIsInstance(q, questions.LocationQuestion)
+        print q
+        # self.mock_geolocator.return_value = None
+        self.assertRegexpMatches(sr.set_answer('Iowa'), '^Ok, we are going to')
+
+        q = sr.next_question()
+        print q
+        self.assertIsInstance(q, questions.BedroomsQuestion)
+        sr.set_answer('1')
+
+        q = sr.next_question()
+        print q
+        self.assertIsInstance(q, questions.PriceQuestion)
+        sr.set_answer('9000')
+
+        q = sr.next_question()
+        print q
+        lease_question = q
+        self.assertIsInstance(q, questions.LeaseStartQuestion)
+        sr.set_answer('today')
+        sr.set_answer('yesterday')
+        print lease_question.param_value
+
+        # q = sr.next_question()
+        # self.assertRegexpMatches(q.param_key, '^engine-question-\d+$')
+        # sr.set_answer('no')
+        #
+        # q = sr.next_question()
+        # self.assertRegexpMatches(q.param_key, '^engine-question-\d+$')
+        # sr.set_answer('no')
+        #
+        # q = sr.next_question()
+        # self.assertRegexpMatches(q.param_key, '^engine-question-\d+$')
+        # sr.set_answer('no')
 
 
-    @patch('clikhome_fbbot.utils.geolocator.geocode_location_to_bbox')
-    @patch.object(GraphAPI, 'get')
-    def test_search_request(self, mock_graph_get, mock_geolocator):
-        from fb_bot.bot.chat_session import ChatSession
-        user_id = 100009095718696
-        mock_graph_get.return_value = {
-            u'name': u'\u0410\u043b\u0435\u043a\u0441\u0435\u0439 \u041a\u043e\u0440\u043e\u0431\u043a\u043e\u0432',
-            u'id': u'100009095718696'
-        }
-        mock_geolocator.return_value = Bbox(**{
-                'formatted_address': 'Iowa, USA',
-                'ne_lng': -90.140061,
-                'sw_lat': 40.375437,
-                'sw_lng': -96.639535,
-                'ne_lat': 43.5011961
-        })
-        session_obj = ChatSession(user_id)
+    # @unittest.skip
+    # def test_search_request_with_session(self):
+    #     from fb_bot.bot.chat_session import ChatSession
+    #     user_id = 100009095718696
+    #
+    #     self.mock_graph_get.reset_mock()
+    #
+    #     session_obj = ChatSession(user_id)
+    #
+    #     with session_obj as session:
+    #         self.mock_graph_get.assert_called_once_with(str(user_id))
+    #         sr = session.search_request
+    #         self._set_answers(sr)
+    #         sr.reset()
+    #         self._set_answers(sr)
 
-        with session_obj as session:
-            sr = session.search_request
-            print sr
-            self._set_answers(sr)
-            sr.reset_questions()
-            self._set_answers(sr)
-        mock_graph_get.assert_called_once_with(str(user_id))
-        mock_geolocator.assert_called()
+    def test_geocoder(self):
+        from fb_bot.bot.fb_search_request import FbSearchRequest
+        sr = FbSearchRequest(100009095718696)
+        sr.reset()
+        q = sr.next_question()
+        self.assertEqual(q.param_key, 'location_bbox')
+        sr.set_answer('Iowa')
+        # print sr.params['location_bbox']
+        self.mock_geolocator.assert_called_once_with('Iowa')
 
     def _set_answers(self, sr, location='Iowa'):
         q = sr.next_question()

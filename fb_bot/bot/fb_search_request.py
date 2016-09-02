@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 import logging
+import os
 import random
 
-from clikhome_shared.engine.questions import get_questions_list
-from fb_bot.bot.questions import Question, EngineQuestion, BadAnswer, ImmediateReply
+import aiml
+
+from fb_bot.bot.questions import EngineQuestion, BadAnswer, ImmediateReply, get_questions_list, BaseQuestion
 from fb_bot import shared_tasks
 
 log = logging.getLogger('clikhome_fbbot.%s' % __name__)
@@ -14,39 +16,25 @@ class FbSearchRequest(object):
 
     def __init__(self, user_id):
         self.user_id = user_id
-        self.params = {}
         self.questions_unanswered_list = list()
         self.questions_answered_list = list()
         self.current_question = None
         self.is_waiting_for_results = False
-        self.location_fmt_address = None
-        self.reset_questions()
+        # self.aiml = aiml.Kernel()
+        # aiml_file = os.path.join(os.path.dirname(__file__), 'questions.xml')
+        # self.aiml.learn(aiml_file)
+        self.reset()
 
-    def reset_questions(self):
-        self.questions_unanswered_list = [
-            Question('Where do you want to move?', 'location_bbox', skip_ask=True),
-            Question('How many bedrooms do you need?', 'bedrooms', '^\d+$'),
-            Question('What is the maximum price per month you are willing to pay?', 'rent__lte', '^\d+$'),
-            EngineQuestion,
-            EngineQuestion,
-            EngineQuestion,
-        ]
-
-        q_kwargs = dict(character=0, single=0)
-        for x in xrange(0, 3):
-            if bool(random.getrandbits(1)):
-                q_kwargs['character'] += 1
-            else:
-                q_kwargs['single'] += 1
-
-        engine_questions = get_questions_list(random=0, **q_kwargs)
-        for i, q in enumerate(self.questions_unanswered_list):
-            if q is EngineQuestion:
-                self.questions_unanswered_list[i] = EngineQuestion(engine_questions.pop(), 'engine-question-%s' % i)
-
+    def reset(self):
+        self.questions_unanswered_list = get_questions_list()
+        self.questions_answered_list = list()
         self.current_question = None
-        self.location_fmt_address = None
-        self.params = {}
+
+    @property
+    def location_fmt_address(self):
+        for q in self.questions_answered_list:
+            if q.param_key == 'location_bbox':
+                return self.current_question.value.formatted_address
 
     def next_question(self):
         if self.questions_unanswered_list:
@@ -56,26 +44,48 @@ class FbSearchRequest(object):
             self.current_question = None
         return self.current_question
 
-    def set_answer(self, answer):
-        assert self.current_question
+    def lookup_next_question(self):
+        if self.questions_unanswered_list:
+            return self.questions_unanswered_list[0]
 
+    @property
+    def params(self):
+        result = dict()
+        for q in self.questions_answered_list:
+            if isinstance(q, EngineQuestion) or not isinstance(q, BaseQuestion):
+                continue
+
+            assert q.param_key not in result, q.param_key
+            result[q.param_key] = q.value
+            self.log('set param %s="%r"' % (q.param_key, result[q.param_key]))
+        return result
+
+    # @property
+    # def engine_user_answers(self):
+    #     user_answers = dict()
+    #     for q in self.questions_answered_list:
+    #         if isinstance(q, EngineQuestion) and q.value:
+    #             user_answers[q.question] = q.value
+    #     return user_answers
+
+    def set_answer(self, answer):
         try:
-            self.current_question.set_answer(answer)
-            if not isinstance(self.current_question, EngineQuestion):
-                self._set_param(self.current_question.param_key, self.current_question.param_value)
-                if self.current_question.param_key == 'location_bbox':
-                    self.location_fmt_address = self.current_question.param_value.formatted_address
-                    return 'Ok, we are going to "%s"' % self.location_fmt_address
+            reply = self.current_question.set_answer(answer)
+            if reply:
+                return reply
         except BadAnswer, e:
+            # if raise ImmediateReply we not ask next question
             raise ImmediateReply(e.message)
 
     def request_search_results(self):
-        bbox = self.params['location_bbox']
-        assert self.engine_user_answers
+        p = self.params
+        bbox = p['location_bbox']
+
+        # TODO: use other params
         filter_kwargs = dict(
-            rent__lte=self.params['rent__lte'],
+            rent__lte=p['rent__lte'],
             unit__rental_complex__address__coords__contained=bbox.to_geom(),
-            unit__bedrooms=self.params['bedrooms'],
+            unit__bedrooms=p['bedrooms'],
             is_listed=True,
         )
         verbose_kwargs = filter_kwargs.copy()
@@ -85,22 +95,11 @@ class FbSearchRequest(object):
             user_id=self.user_id,
             bbox_as_list=bbox.as_list,
             filter_kwargs=filter_kwargs,
-            engine_user_answers=self.engine_user_answers,
+            engine_user_answers=dict(),
+            # engine_user_answers=self.engine_user_answers,
             search_location_fmt_address=self.location_fmt_address
         )
         self.is_waiting_for_results = True
-
-    @property
-    def engine_user_answers(self):
-        user_answers = dict()
-        for q in self.questions_answered_list:
-            if isinstance(q, EngineQuestion) and q.answer:
-                user_answers[q.question] = q.answer
-        return user_answers
-
-    def _set_param(self, key, value):
-        self.log('set param %s="%r"' % (key, value))
-        self.params[key] = value
 
     def log(self, msg):
         log.debug('%s: %s current_question: %r' % (self, msg, self.current_question))

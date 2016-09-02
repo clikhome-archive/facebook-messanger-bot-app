@@ -3,10 +3,8 @@ from __future__ import absolute_import, unicode_literals
 import logging
 import re
 
-from django.conf import settings
-
 from fb_bot.bot.decorators import respond_to
-from fb_bot.bot.questions import ImmediateReply
+from fb_bot.bot.questions import ImmediateReply, SendApartmentSuggestion
 from fb_bot.bot.utils import get_results_attachment
 
 log = logging.getLogger('clikhome_fbbot.%s' % __name__)
@@ -40,14 +38,17 @@ def send_results(user_id, more_url, listings):
             attachment = get_results_attachment(listings, more_url)
             attachment_reply(user_id, attachment)
             log.debug('Return results for %s' % sr)
+            q = sr.next_question()
+            reply(user_id, q.question)
         else:
             log.debug('No results for %s' % sr)
+            # TODO: handle it
             reply(user_id, "Sorry, we can't find any listing with this criteria.")
 
 
 def ask_question(message, sr, question_text=None):
     q = sr.next_question()
-    if q is None:
+    if q is SendApartmentSuggestion:
         sr.request_search_results()
     else:
         if question_text:
@@ -58,7 +59,7 @@ def ask_question(message, sr, question_text=None):
 
 @respond_to('^reset|again|restart$', re.IGNORECASE)
 def restart(message, sr):
-    sr.reset_questions()
+    sr.reset()
     greetings = THE_GREETING.format(sender_first_name=message.sender_first_name)
     ask_question(message, sr, question_text=greetings)
 
@@ -69,14 +70,14 @@ def restart(message, sr):
 #     if sr.current_question and sr.current_question.param_key == 'location_bbox':
 #         _set_answer(message, sr)
 #     else:
-#         sr.reset_questions()
+#         sr.reset()
 #         sr.next_question()
 #         assert sr.current_question.param_key == 'location_bbox'
 #         _set_answer(message, sr)
 
 @respond_to('^Hi|Hello|ClikHome|help$', re.IGNORECASE)
 def hi(message, sr):
-    sr.reset_questions()
+    sr.reset()
     greetings = THE_GREETING.format(sender_first_name=message.sender_first_name)
     message.reply(greetings)
     ask_question(message, sr)
@@ -105,7 +106,7 @@ def admin_show_results(message, sr):
 
 @respond_to('^@test_results$', re.IGNORECASE)
 def admin_test_results(message, sr):
-    sr.reset_questions()
+    sr.reset()
     q = sr.next_question()
     assert 'location_bbox' in q.param_key
     sr.set_answer('New York')

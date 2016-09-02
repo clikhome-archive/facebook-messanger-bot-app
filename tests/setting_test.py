@@ -56,11 +56,7 @@ class Test(Common):
         }
     }
     FBBOT_VERIFY_TOKEN = 'dev-verify-token'
-
-    FBBOT_APP_ID = '1720907708191793'
-    FBBOT_APP_SECRET = '4d778c37bfb304ffa0c2b5de1eab37a9'
-
-    FBBOT_PAGE_ACCESS_TOKEN = 'EAAYdKAyjVDEBAI9M9BZCX94naZBCeVb7dmxCQGXPT6lSJUI52KOdmeu9Yzp4jZBG6o19RkcwVRPX9W2lW8nJ2g6gqtklBn80FfxwQrVVV966GpsdhFzwM3ZBCBdJknob9dmjr1qtmj2svMWiAAYn4TOZBOZAX61rMBcJIn72maHAZDZD'
+    FBBOT_PAGE_ACCESS_TOKEN = 'none'
 
     @classmethod
     def setup(cls):
