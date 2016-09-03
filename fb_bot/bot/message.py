@@ -63,10 +63,10 @@ class Message(object):
 
     @property
     def sender_first_name(self):
-        try:
+        if 'first_name' in self.session.data['user_profile']:
+            return self.session.data['user_profile']['first_name']
+        else:
             return self.session.data['user_profile']['name'].split(' ', 1)[0]
-        except Exception:
-            return self.session.data['user_profile']['name']
 
     @property
     def sender_id(self):

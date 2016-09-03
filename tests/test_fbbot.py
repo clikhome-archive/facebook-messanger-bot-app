@@ -40,20 +40,47 @@ class FbBotTest(BaseTestCase):
             u'id': u'100009095718696'
         }
 
+    def test_parse_name(self):
+        from fb_bot.bot.message import Message
+        fixtures = [
+            {
+                u'first_name': u'\u0410\u043b\u0435\u043a\u0441\u0435\u0439',
+                u'gender': u'male',
+                u'last_name': u'\u041a\u043e\u0440\u043e\u0431\u043a\u043e\u0432',
+                u'locale': u'en_US',
+                u'profile_pic': u'https://scontent.xx.fbcdn.net/v/t1.0-1/p200x200/12004789_1501056863540823_2883307817188408648_n.jpg?oh=6547a7dc9c75afb640197537f672d9ef&oe=5846D2D1',
+                u'timezone': 3
+            },
+            {
+                u'name': u'\u0410\u043b\u0435\u043a\u0441\u0435\u0439 \u041a\u043e\u0440\u043e\u0431\u043a\u043e\u0432',
+                u'id': u'100009095718696'
+            }
+        ]
+        session_mock = Mock()
+        msg = Message(wh_msg=self.get_msg(), session=session_mock)
+        results = []
+        for data in fixtures:
+            session_mock.data = dict(user_profile=data)
+            results.append(msg.sender_first_name)
+        self.assertEqual(results[0], results[1])
+
+    def get_msg(self):
+        from messengerbot.webhooks import WebhookEntry
+        wh_entry_list = WebhookEntry(
+            self.message_entry['entry'][0]['id'],
+            self.message_entry['entry'][0]['time'],
+            self.message_entry['entry'][0]['messaging'],
+        )
+        return wh_entry_list.messaging[0]
+
     @patch.object(MessengerClient, 'send')
     def test_greetings(self, mock_messenger_client_send):
         from fb_bot.bot.chat_session import ChatSession
         from fb_bot.bot.message import Message
         from fb_bot.bot import handlers
-        from messengerbot.webhooks import WebhookEntry
 
         with ChatSession('100009095718696') as session:
-            wh_entry_list = WebhookEntry(
-                self.message_entry['entry'][0]['id'],
-                self.message_entry['entry'][0]['time'],
-                self.message_entry['entry'][0]['messaging'],
-            )
-            msg = wh_entry_list.messaging[0]
+            msg = self.get_msg()
             message = Message(msg, session)
             fmt_greetings = handlers.THE_GREETING.format(sender_first_name=message.sender_first_name)
             def send_side_effect(message):
