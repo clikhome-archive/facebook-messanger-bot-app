@@ -33,8 +33,8 @@ class FbSearchRequest(object):
     @property
     def location_fmt_address(self):
         for q in self.questions_answered_list:
-            if q.param_key == 'location_bbox':
-                return self.current_question.value.formatted_address
+            if getattr(q, 'param_key', None) == 'location_bbox':
+                return q.value.formatted_address
 
     def next_question(self):
         if self.questions_unanswered_list:

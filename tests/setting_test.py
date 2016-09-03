@@ -10,7 +10,7 @@ class Test(Common):
     SECRET_KEY = 'test'
 
     BROKER_BACKEND = 'memory'
-    CELERY_RESULT_BACKEND = 'memory'
+    CELERY_RESULT_BACKEND = 'cache+memory://'
     BROKER_URL = 'memory://localhost/'
     CELERY_ALWAYS_EAGER = True
     CELERY_EAGER_PROPAGATES_EXCEPTIONS = True

@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import re
 import random
-from six import with_metaclass, add_metaclass
 from timestring import Range, TimestringInvalid
 
 from clikhome_fbbot.utils import geolocator
@@ -27,6 +26,7 @@ class BaseQuestion(object):
     answer_bad_message = 'Bad answer "%(answer)s"'
     param_key = None
     param_value = None
+    skip_ask = False
     answer = None
 
     @property
@@ -217,18 +217,29 @@ class AskPhoneNumberQuestion(BaseQuestion):
                 )
 
 
+class Greeting(object):
+    greeting = 'Hi {sender_first_name}! This is Mary with Apartment Ocean. How are you?'
+
+    @staticmethod
+    def __new__(cls, *more):
+        raise Exception('This class cannot be instanced')
+
+
 class SendApartmentSuggestion(object):
-    pass
+    @staticmethod
+    def __new__(cls, *more):
+        raise Exception('This class cannot be instanced')
 
 
 def get_questions_list():
     questions = [
+        Greeting,
         LocationQuestion(),
         BedroomsQuestion(),
         PriceQuestion(),
         LeaseStartQuestion(),
         PetsQuestion(),
-        SendApartmentSuggestion(),
+        SendApartmentSuggestion,
         AskPhoneNumberQuestion(),
 
         # EngineQuestion,

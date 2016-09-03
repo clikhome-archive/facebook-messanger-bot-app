@@ -4,17 +4,21 @@ import logging
 import re
 
 from fb_bot.bot.decorators import respond_to
-from fb_bot.bot.questions import ImmediateReply, SendApartmentSuggestion
+from fb_bot.bot.questions import ImmediateReply
+from fb_bot.bot import questions
 from fb_bot.bot.utils import get_results_attachment
 
 log = logging.getLogger('clikhome_fbbot.%s' % __name__)
 
-THE_GREETING = 'Hi {sender_first_name}! This is Mary with Apartment Ocean. How are you?'
-
 
 def _set_answer(message, sr):
     text = message.text
-    if sr.current_question:
+    q = sr.current_question
+    if not q:
+        message.reply('Bad command "{}"'.format(text))
+    elif q is questions.Greeting:
+        message.reply(sr.next_question().question)
+    else:
         try:
             reply = sr.set_answer(text)
             if reply:
@@ -23,8 +27,6 @@ def _set_answer(message, sr):
             message.reply(e.message)
         else:
             ask_question(message, sr)
-    else:
-        message.reply(u'Bad command "{}"'.format(text))
 
 
 def send_results(user_id, more_url, listings):
@@ -48,8 +50,11 @@ def send_results(user_id, more_url, listings):
 
 def ask_question(message, sr, question_text=None):
     q = sr.next_question()
-    if q is SendApartmentSuggestion:
+    if q is questions.SendApartmentSuggestion:
         sr.request_search_results()
+    elif q is questions.Greeting:
+        greetings = q.greeting.format(sender_first_name=message.sender_first_name)
+        message.reply(greetings)
     else:
         if question_text:
             message.reply(question_text)
@@ -60,8 +65,9 @@ def ask_question(message, sr, question_text=None):
 @respond_to('^reset|again|restart$', re.IGNORECASE)
 def restart(message, sr):
     sr.reset()
-    greetings = THE_GREETING.format(sender_first_name=message.sender_first_name)
-    ask_question(message, sr, question_text=greetings)
+    # greetings = THE_GREETING.format(sender_first_name=message.sender_first_name)
+    # ask_question(message, sr, question_text=greetings)
+    ask_question(message, sr)
 
 
 # @respond_to('^I want to move to (.+)$', re.IGNORECASE)
@@ -75,11 +81,11 @@ def restart(message, sr):
 #         assert sr.current_question.param_key == 'location_bbox'
 #         _set_answer(message, sr)
 
-@respond_to('^Hi|Hello|ClikHome|help$', re.IGNORECASE)
+@respond_to('^Hi|Hey|Hello|ClikHome|help$', re.IGNORECASE)
 def hi(message, sr):
     sr.reset()
-    greetings = THE_GREETING.format(sender_first_name=message.sender_first_name)
-    message.reply(greetings)
+    # greetings = THE_GREETING.format(sender_first_name=message.sender_first_name)
+    # message.reply(greetings)
     ask_question(message, sr)
 
 
@@ -91,7 +97,7 @@ def default_handler(message, sr):
 @respond_to('^!hey$', re.IGNORECASE)
 def hey(message, sr):
     # eggplant
-    message.reply(u'\U0001F346')
+    message.reply('\U0001F346')
 
 
 @respond_to('^!secret500$', re.IGNORECASE)
