@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, unicode_literals
 import re
-import random
 from timestring import Range, TimestringInvalid
 
 from clikhome_fbbot.utils import geolocator
-from clikhome_shared.engine.questions import get_questions_list as get_engine_questions_list
 
 
 class ImmediateReply(Exception):
@@ -157,34 +155,6 @@ class PetsQuestion(BaseQuestion):
                 raise ImmediateReply(self.additional_question.question)
 
 
-class EngineQuestion(BaseQuestion):
-    answer_matcher = re.compile(r'^yes|no|y|n$', re.IGNORECASE)
-    answer_bad_message = 'Sorry, "{answer}" is a bad answer, please choose yes/y or no/n.'
-
-    def __init__(self, question, param_key):
-        self.question = question
-        self.param_key = param_key
-
-    def _validate_answer(self, answer):
-        m = self.answer_matcher.match(answer)
-        return bool(m)
-
-    @property
-    def value(self):
-        return self.answer
-
-    def set_answer(self, answer):
-        answer = answer.strip().lower()
-        if not self._validate_answer(answer):
-            raise BadAnswer(self.answer_bad_message.format(answer=answer))
-
-        if answer == 'y':
-            answer = 'yes'
-        if answer == 'n':
-            answer = 'no'
-        self.answer = answer
-
-
 class AskPhoneNumberQuestion(BaseQuestion):
     answer_matcher = re.compile(r'^yes|no|y|n$', re.IGNORECASE)
     answer_bad_message = 'Sorry, "{answer}" is a bad answer, please choose yes/y or no/n.'
@@ -241,22 +211,7 @@ def get_questions_list():
         PetsQuestion(),
         SendApartmentSuggestion,
         AskPhoneNumberQuestion(),
-
-        # EngineQuestion,
-        # EngineQuestion,
-        # EngineQuestion,
     ]
 
-    # q_kwargs = dict(character=0, single=0)
-    # for x in xrange(0, 3):
-    #     if bool(random.getrandbits(1)):
-    #         q_kwargs['character'] += 1
-    #     else:
-    #         q_kwargs['single'] += 1
-    #
-    # engine_questions = get_engine_questions_list(random=0, **q_kwargs)
-    # for i, q in enumerate(questions):
-    #     if q is EngineQuestion:
-    #         questions[i] = EngineQuestion(engine_questions.pop(), 'engine-question-%s' % i)
     return questions
 

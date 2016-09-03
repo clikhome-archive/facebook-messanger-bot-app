@@ -2,11 +2,9 @@
 from __future__ import absolute_import
 import logging
 import os
-import random
-
 import aiml
 
-from fb_bot.bot.questions import EngineQuestion, BadAnswer, ImmediateReply, get_questions_list, BaseQuestion
+from fb_bot.bot.questions import BadAnswer, ImmediateReply, get_questions_list, BaseQuestion
 from fb_bot import shared_tasks
 
 log = logging.getLogger('clikhome_fbbot.%s' % __name__)
@@ -52,21 +50,13 @@ class FbSearchRequest(object):
     def params(self):
         result = dict()
         for q in self.questions_answered_list:
-            if isinstance(q, EngineQuestion) or not isinstance(q, BaseQuestion):
+            if not isinstance(q, BaseQuestion):
                 continue
 
             assert q.param_key not in result, q.param_key
             result[q.param_key] = q.value
             self.log('set param %s="%r"' % (q.param_key, result[q.param_key]))
         return result
-
-    # @property
-    # def engine_user_answers(self):
-    #     user_answers = dict()
-    #     for q in self.questions_answered_list:
-    #         if isinstance(q, EngineQuestion) and q.value:
-    #             user_answers[q.question] = q.value
-    #     return user_answers
 
     def set_answer(self, answer):
         try:
@@ -95,8 +85,7 @@ class FbSearchRequest(object):
             user_id=self.user_id,
             bbox_as_list=bbox.as_list,
             filter_kwargs=filter_kwargs,
-            engine_user_answers=dict(),
-            # engine_user_answers=self.engine_user_answers,
+            engine_user_answers=None,
             search_location_fmt_address=self.location_fmt_address
         )
         self.is_waiting_for_results = True
