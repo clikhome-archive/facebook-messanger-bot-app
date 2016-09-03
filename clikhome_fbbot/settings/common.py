@@ -140,7 +140,7 @@ class CeleryCommon(Configuration):
     CELERY_ACCEPT_CONTENT = ['pickle', 'json', 'msgpack', 'yaml']
     CELERY_RESULT_SERIALIZER = 'json'
     CELERY_SEND_EVENTS = True
-
+    CELERYD_CONCURRENCY = os.environ.get('CELERYD_CONCURRENCY', 10)
     CELERYD_LOG_FORMAT = """
         [%(asctime)s: %(levelname)s/%(processName)s/%(threadName)s] %(message)s
     """.strip()
