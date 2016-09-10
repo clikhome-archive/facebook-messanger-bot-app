@@ -48,6 +48,25 @@ def send_results(user_id, more_url, listings):
             reply(user_id, "Sorry, we can't find any listing with this criteria.")
 
 
+def send_simple_results(user_id, more_url, listings):
+    from fb_bot.bot.chat_session import ChatSession
+    from fb_bot.bot.message import attachment_reply, reply
+
+    with ChatSession(user_id) as session:
+        sr = session.search_request
+        sr.is_waiting_for_results = False
+        if listings:
+            attachment = get_results_attachment(listings, more_url)
+            attachment_reply(user_id, attachment)
+            log.debug('Return results for %s' % sr)
+            q = sr.next_question()
+            reply(user_id, q.question)
+        else:
+            log.debug('No results for %s' % sr)
+            # TODO: handle it
+            reply(user_id, "Sorry, we can't find any listing with this criteria.")
+
+
 def ask_question(message, sr, question_text=None):
     q = sr.next_question()
     if q is questions.SendApartmentSuggestion:
@@ -105,48 +124,48 @@ def secret500(message, sr):
     message.reply('%s' % (1/0))
 
 
-@respond_to('^@show_results$', re.IGNORECASE)
-def admin_show_results(message, sr):
-    sr.request_search_results()
+# @respond_to('^@show_results$', re.IGNORECASE)
+# def admin_show_results(message, sr):
+#     sr.request_search_results()
 
 
-@respond_to('^@test_results$', re.IGNORECASE)
-def admin_test_results(message, sr):
-    sr.reset()
-    q = sr.next_question()
-    assert 'location_bbox' in q.param_key
-    sr.set_answer('New York')
-    q = sr.next_question()
-    assert 'bedrooms' in q.param_key
-    sr.set_answer('1')
+# @respond_to('^@test_results$', re.IGNORECASE)
+# def admin_test_results(message, sr):
+#     sr.reset()
+#     q = sr.next_question()
+#     assert 'location_bbox' in q.param_key
+#     sr.set_answer('New York')
+#     q = sr.next_question()
+#     assert 'bedrooms' in q.param_key
+#     sr.set_answer('1')
+#
+#     q = sr.next_question()
+#     assert 'rent__lte' in q.param_key
+#     sr.set_answer('9000')
+#
+#     q = sr.next_question()
+#     sr.set_answer('no')
+#
+#     q = sr.next_question()
+#     sr.set_answer('no')
+#
+#     q = sr.next_question()
+#     sr.set_answer('no')
+#     sr.request_search_results()
 
-    q = sr.next_question()
-    assert 'rent__lte' in q.param_key
-    sr.set_answer('9000')
 
-    q = sr.next_question()
-    sr.set_answer('no')
-
-    q = sr.next_question()
-    sr.set_answer('no')
-
-    q = sr.next_question()
-    sr.set_answer('no')
-    sr.request_search_results()
-
-
-@respond_to('^@sessions_keys$', re.IGNORECASE)
-def admin_sessions_keys(message, sr):
-    items = list()
-    c = message.session.cache
-    for key in c.keys('*'):
-        ttl = c.ttl(key)
-        data = c.get(key, {})
-        session_params = repr({})
-        session_sr = data.get('search_request', None)
-        if session_sr:
-            session_params = repr(session_sr.params)
-        items.append('%s ttl=%s session_params=%r' % (key, ttl, session_params))
-    text = '\n'.join(items)
-    message.reply(text)
-
+# @respond_to('^@sessions_keys$', re.IGNORECASE)
+# def admin_sessions_keys(message, sr):
+#     items = list()
+#     c = message.session.cache
+#     for key in c.keys('*'):
+#         ttl = c.ttl(key)
+#         data = c.get(key, {})
+#         session_params = repr({})
+#         session_sr = data.get('search_request', None)
+#         if session_sr:
+#             session_params = repr(session_sr.params)
+#         items.append('%s ttl=%s session_params=%r' % (key, ttl, session_params))
+#     text = '\n'.join(items)
+#     message.reply(text)
+#

@@ -14,3 +14,9 @@ def handle_entry_queue(queue_name):
 def return_search_results(user_id, more_url, listings):
     from fb_bot.bot.handlers import send_results
     send_results(user_id=user_id, more_url=more_url, listings=listings)
+
+
+@celery.task(ignore_result=True, max_retries=0, queue='fb-bot', expires=30)
+def return_simple_search_results(user_id, listings):
+    from fb_bot.bot.handlers import send_simple_results
+    send_simple_results(user_id=user_id, listings=listings)

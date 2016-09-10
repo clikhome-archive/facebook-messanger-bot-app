@@ -31,6 +31,10 @@ class BaseQuestion(object):
     def value(self):
         return self.param_value
 
+    @property
+    def filter_value(self):
+        raise NotImplemented
+
     def set_answer(self, answer):
         raise NotImplemented()
 
@@ -51,6 +55,12 @@ class LocationQuestion(BaseQuestion):
     }
     skip_ask = True
 
+    @property
+    def filter_value(self):
+        return {
+            '!location_bbox': self.param_value
+        }
+
     def set_answer(self, answer):
         answer = re.sub(r'^to\s+', '', answer, 1, re.IGNORECASE)
         bbox = geolocator.geocode_location_to_bbox(answer)
@@ -67,6 +77,12 @@ class BedroomsQuestion(BaseQuestion):
     param_key = 'bedrooms'
     answer_matcher = re.compile('^\d+$', re.IGNORECASE)
 
+    @property
+    def filter_value(self):
+        return dict(
+            bedrooms=self.param_value
+        )
+
     def set_answer(self, answer):
         # TODO: may be we should accept answers like 'any'?
         # TODO: convert words to numbers
@@ -81,8 +97,14 @@ class BedroomsQuestion(BaseQuestion):
 
 class PriceQuestion(BaseQuestion):
     question = 'What’s your price range?'
-    param_key = 'rent__lte'
+    param_key = 'price_range'
     answer_matcher = re.compile('^\d+$', re.IGNORECASE)
+
+    @property
+    def filter_value(self):
+        return dict(
+            price_range=[self.param_value, self.param_value]
+        )
 
     def set_answer(self, answer):
         # TODO: convert words to numbers
@@ -101,6 +123,10 @@ class LeaseStartQuestion(BaseQuestion):
         'bad_date': """Sorry, I can't understand this date: '{answer}'"""
     }
 
+    @property
+    def filter_value(self):
+        return dict(lease_range=self.param_value)
+
     def set_answer(self, answer):
         try:
             value = Range(answer)
@@ -109,7 +135,7 @@ class LeaseStartQuestion(BaseQuestion):
             raise BadAnswer(self.answer_bad_message.format(answer=answer))
 
 
-class PetAdditionalQuestion(BaseQuestion):
+class DogWeighAdditionalQuestion(BaseQuestion):
     answer_matcher = re.compile(r'^yes|no|y|n$', re.IGNORECASE)
     question = 'Does your dog weigh more than 25 Lbs?'
     answer_bad_message = 'Sorry, "{answer}" is a bad answer, please choose yes/y or no/n.'
@@ -120,7 +146,12 @@ class PetAdditionalQuestion(BaseQuestion):
 
     @property
     def value(self):
-        return self.answer
+        if self.answer in ('y', 'yes'):
+            return True
+        elif self.answer in ('n', 'no'):
+            return False
+        else:
+            raise ValueError(self.answer)
 
     def set_answer(self, answer):
         answer = answer.strip().lower()
@@ -136,22 +167,35 @@ class PetsQuestion(BaseQuestion):
     answer_bad_message = 'Sorry, "{answer}" is a bad answer, please choose: No, Dog, Cat'
     additional_question = None
 
+    @property
+    def filter_value(self):
+        if self.param_value == 'no':
+            return dict()
+        else:
+            return {
+                '!has_pet': self.param_value
+            }
+
     def set_answer(self, answer):
         if self.additional_question:
             self.additional_question.set_answer(answer)
+            self.param_value['dog_have_weigh_gte_25lbs'] = self.additional_question.value
             return
 
         if not self.answer_matcher.match(answer):
             raise BadAnswer(self.answer_bad_message % dict(answer=answer))
 
         pet_type = answer.strip().lower()
+
         if pet_type == 'no':
-            self.param_value = None
-            return
+            self.param_value = pet_type
         else:
-            value = dict(pet_type=pet_type)
-            if value['pet_type'] == 'dog':
-                self.additional_question = PetAdditionalQuestion(parent=self)
+            self.param_value = {
+                'pet_type': self.param_value,
+                'dog_have_weigh_gte_25lbs': False
+            }
+            if self.param_value['pet_type'] == 'dog':
+                self.additional_question = DogWeighAdditionalQuestion(parent=self)
                 raise ImmediateReply(self.additional_question.question)
 
 

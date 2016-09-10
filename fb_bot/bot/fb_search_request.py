@@ -28,12 +28,6 @@ class FbSearchRequest(object):
         self.questions_answered_list = list()
         self.current_question = None
 
-    @property
-    def location_fmt_address(self):
-        for q in self.questions_answered_list:
-            if getattr(q, 'param_key', None) == 'location_bbox':
-                return q.value.formatted_address
-
     def next_question(self):
         if self.questions_unanswered_list:
             self.current_question = self.questions_unanswered_list.pop(0)
@@ -47,15 +41,16 @@ class FbSearchRequest(object):
             return self.questions_unanswered_list[0]
 
     @property
-    def params(self):
+    def filter_params(self):
         result = dict()
         for q in self.questions_answered_list:
             if not isinstance(q, BaseQuestion):
                 continue
 
-            assert q.param_key not in result, q.param_key
-            result[q.param_key] = q.value
-            self.log('set param %s="%r"' % (q.param_key, result[q.param_key]))
+            for key, value in q.filter_value.items():
+                self.log('[%s] set param %s="%r" from ' % (q.__class__.__name__, key, value))
+                assert key not in result
+                result[key] = value
         return result
 
     def set_answer(self, answer):
@@ -68,25 +63,23 @@ class FbSearchRequest(object):
             raise ImmediateReply(e.message)
 
     def request_search_results(self):
-        p = self.params
-        bbox = p['location_bbox']
+        filter_params = dict(self.filter_params)
+        bbox = filter_params.pop('!location_bbox')
+        location_fmt_address = str(bbox.formatted_address)
 
-        # TODO: use other params
-        filter_kwargs = dict(
-            rent__lte=p['rent__lte'],
-            unit__rental_complex__address__coords__contained=bbox.to_geom(),
-            unit__bedrooms=p['bedrooms'],
-            is_listed=True,
-        )
-        verbose_kwargs = filter_kwargs.copy()
-        verbose_kwargs['unit__rental_complex__address__coords__contained'] = '%s' % verbose_kwargs['unit__rental_complex__address__coords__contained']
-        self.log('Query filter %r' % verbose_kwargs)
-        shared_tasks.request_listings_search(
+        verbose_params = filter_params.copy()
+        verbose_params['user_id'] = str(self.user_id)
+        verbose_params['bbox_as_list'] = str(bbox.as_list)
+        verbose_params['search_location_fmt_address'] = location_fmt_address
+
+        log.debug('%s: Query filter %r' % (self, verbose_params))
+
+        shared_tasks.request_simple_listings_search(
             user_id=self.user_id,
             bbox_as_list=bbox.as_list,
-            filter_kwargs=filter_kwargs,
-            engine_user_answers=None,
-            search_location_fmt_address=self.location_fmt_address
+            filters=filter_params,
+            search_location_fmt_address=location_fmt_address,
+            limit=1
         )
         self.is_waiting_for_results = True
 
