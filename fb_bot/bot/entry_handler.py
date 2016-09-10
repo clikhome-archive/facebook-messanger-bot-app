@@ -14,6 +14,7 @@ from fb_bot.bot.chat_session import ChatSession
 from fb_bot.bot.ctx import set_chat_context
 from fb_bot.bot.manager import Manager
 from fb_bot.bot.message import Message
+from fb_bot.models import ChatLog
 from fb_bot.tasks import handle_entry_queue
 
 log = logging.getLogger('clikhome_fbbot.%s' % __name__)
@@ -34,15 +35,28 @@ class EntryHandler(object):
         :type msg: WebhookMessaging
         """
         assert msg.is_message
+        text = msg._message['text']
 
         now = datetime.datetime.utcnow()
         delta = (now - msg.timestamp)
         if delta.seconds >= settings.FBBOT_MSG_EXPIRE:
-            log.warn('Drop expired message, delta=%s' % delta.seconds)
+            log_message = 'Drop expired message, delta=%s' % delta.seconds
+            ChatLog.objects.create(
+                recipient=msg.sender.recipient_id,
+                type='in',
+                errors=log_message,
+                text=text
+            )
+            log.warn(log_message)
             return
 
-        text = msg._message['text']
+        ChatLog.objects.create(
+            recipient=msg.sender.recipient_id,
+            type='in',
+            text=text
+        )
         msg_obj = Message(msg, session)
+
         for cb, _ in self._get_receivers(msg_obj.text):
             if cb:
                 if msg_obj.text.startswith('@') and int(msg_obj.sender_id) not in self.admin_ids:

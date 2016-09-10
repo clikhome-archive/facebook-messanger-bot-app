@@ -6,6 +6,7 @@ from unittest import skip
 import os
 import json
 
+import pytest
 from clikhome_shared.utils.bbox import Bbox
 from django.test.utils import override_settings
 from messengerbot import MessengerClient
@@ -17,6 +18,7 @@ from tests.utils import BaseTestCase
 from fb_bot.bot.entry_handler import EntryHandler
 
 
+@pytest.mark.django_db(transaction=False)
 class FbBotTest(BaseTestCase):
 
     def setUp(self):
