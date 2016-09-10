@@ -190,6 +190,7 @@ class PetsQuestion(BaseQuestion):
         if pet_type == 'no':
             self.param_value = pet_type
         else:
+            self.param_value = pet_type
             self.param_value = {
                 'pet_type': self.param_value,
                 'dog_have_weigh_gte_25lbs': False

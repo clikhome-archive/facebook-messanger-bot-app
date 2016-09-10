@@ -86,7 +86,7 @@ class FbBotTest(BaseTestCase):
         from fb_bot.bot.message import Message
         return Message(wh_msg=self.get_wh_message(text), session=session)
 
-    @patch('fb_bot.shared_tasks.request_listings_search')
+    @patch('fb_bot.shared_tasks.request_simple_listings_search')
     @patch.object(MessengerClient, 'send')
     @override_settings(
         CACHES={

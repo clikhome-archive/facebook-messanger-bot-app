@@ -40,7 +40,7 @@ class QuestionsTestCase(BaseTestCase):
         except ImmediateReply, e:
             assert e.message
             q.set_answer('no')
-            assert q.additional_question.value == 'no'
+            assert q.additional_question.value == False
 
         q = PetsQuestion()
         try:

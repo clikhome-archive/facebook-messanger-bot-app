@@ -8,10 +8,9 @@ https://docs.djangoproject.com/en/1.8/howto/deployment/wsgi/
 """
 
 import os
-
-from django.core.wsgi import get_wsgi_application
-
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'clikhome_fbbot.settings')
 # os.environ.setdefault('DJANGO_CONFIGURATION', 'Dev')
+
+from configurations.wsgi import get_wsgi_application
 
 application = get_wsgi_application()
