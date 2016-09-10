@@ -48,7 +48,7 @@ def send_results(user_id, more_url, listings):
             reply(user_id, "Sorry, we can't find any listing with this criteria.")
 
 
-def send_simple_results(user_id, more_url, listings):
+def send_simple_results(user_id, listings):
     from fb_bot.bot.chat_session import ChatSession
     from fb_bot.bot.message import attachment_reply, reply
 
@@ -56,7 +56,7 @@ def send_simple_results(user_id, more_url, listings):
         sr = session.search_request
         sr.is_waiting_for_results = False
         if listings:
-            attachment = get_results_attachment(listings, more_url)
+            attachment = get_results_attachment(listings)
             attachment_reply(user_id, attachment)
             log.debug('Return results for %s' % sr)
             q = sr.next_question()
