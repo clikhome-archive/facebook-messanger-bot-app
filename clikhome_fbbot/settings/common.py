@@ -165,6 +165,7 @@ class AppsCommon(Configuration):
     )
     FBBOT_MSG_EXPIRE = 10
     GOOGLE_GEOCODER_API_KEY = EnvVal('GOOGLE_GEOCODER_API_KEY')
+    CHAT_SESSION_TIMEOUT = os.getenv('CHAT_SESSION_TIMEOUT', 3600)
 
 
 class Common(DjangoCommon, CeleryCommon, AppsCommon):

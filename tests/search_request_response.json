@@ -1,0 +1,8 @@
+[
+  {
+    "title": "This is a nice apartment",
+    "fmt_address": "123 Albany Ave SE, Orange City, IA 51041, US",
+    "image_url": "https://clikhomepropertyphotos.s3.amazonaws.com/photos/1bb7c79a-92dd-4397-9c8b-8227e05d3217.jpg",
+    "listing_url": "https://clikhome-python-development.herokuapp.com/listing/123-Albany-Ave-Se-Orange-City-IA-51041-US/303938"
+  }
+]

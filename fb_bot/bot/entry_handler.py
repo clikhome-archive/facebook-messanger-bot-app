@@ -2,6 +2,7 @@
 from __future__ import absolute_import
 import datetime
 import logging
+from threading import Lock
 
 from django.conf import settings
 from hotqueue import HotQueue
@@ -10,6 +11,7 @@ from raven.contrib.django.raven_compat.models import client as raven_client
 
 from fb_bot.bot.chat_lock import ChatLock
 from fb_bot.bot.chat_session import ChatSession
+from fb_bot.bot.ctx import set_chat_context
 from fb_bot.bot.manager import Manager
 from fb_bot.bot.message import Message
 from fb_bot.tasks import handle_entry_queue
@@ -24,6 +26,8 @@ class EntryHandler(object):
     def __init__(self):
         from fb_bot.bot import handlers
         self.default_handler = handlers.default_handler
+        self.current_session = None
+        self.sync_lock = Lock()
 
     def _handle_message(self, msg, session):
         """
@@ -99,7 +103,7 @@ class EntryHandler(object):
         return handled_count
 
     def handle_entry_sync(self, entry, sender_id):
-        with ChatSession(sender_id) as session:
+        with self.sync_lock as lock, ChatSession(sender_id) as session, set_chat_context(session):
             self._handle_message(entry, session)
 
     @classmethod

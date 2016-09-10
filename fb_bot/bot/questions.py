@@ -4,6 +4,7 @@ import re
 from timestring import Range, TimestringInvalid
 
 from clikhome_fbbot.utils import geolocator
+from fb_bot.bot.ctx import get_current_session
 
 
 class ImmediateReply(Exception):
@@ -21,7 +22,7 @@ class GoToFinish(Exception):
 class BaseQuestion(object):
     question = None
     answer_matcher = re.compile(r'.+', re.IGNORECASE)
-    answer_bad_message = 'Bad answer "%(answer)s"'
+    answer_bad_message = 'Bad answer "{answer}"'
     param_key = None
     param_value = None
     skip_ask = False
@@ -51,7 +52,7 @@ class LocationQuestion(BaseQuestion):
     question = 'Great, where do you want to move?'
     param_key = 'location_bbox'
     messages = {
-        'location_not_found': """Sorry, we I can't find "{answer}" location."""
+        'location_not_found': """Sorry, we I can't find "{answer}" location, please try again."""
     }
     skip_ask = True
 
@@ -90,7 +91,7 @@ class BedroomsQuestion(BaseQuestion):
             answer = '0'
 
         if not self.answer_matcher.match(answer):
-            raise BadAnswer(self.answer_bad_message % dict(answer=answer))
+            raise BadAnswer(self.answer_bad_message.format(answer=answer))
 
         self.param_value = answer
 
@@ -111,7 +112,7 @@ class PriceQuestion(BaseQuestion):
         # TODO: accept ranges
         answer = re.sub('\D+', '', answer)
         if not self.answer_matcher.match(answer):
-            raise BadAnswer(self.answer_bad_message % dict(answer=answer))
+            raise BadAnswer(self.answer_bad_message.format(answer=answer))
         self.param_value = answer
 
 
@@ -233,28 +234,29 @@ class AskPhoneNumberQuestion(BaseQuestion):
 
 
 class Greeting(object):
-    greeting = 'Hi {sender_first_name}! This is Mary with Apartment Ocean. How are you?'
+    _greeting = 'Hi {user_first_name}! This is Mary with Apartment Ocean. How are you?'
 
-    @staticmethod
-    def __new__(cls, *more):
-        raise Exception('This class cannot be instanced')
+    @property
+    def greeting(self):
+        session = get_current_session()
+        return self._greeting.format(user_first_name=session.user_first_name)
 
 
 class SendApartmentSuggestion(object):
-    @staticmethod
-    def __new__(cls, *more):
-        raise Exception('This class cannot be instanced')
+
+    def set_answer(self, answer):
+        pass
 
 
 def get_questions_list():
     questions = [
-        Greeting,
+        Greeting(),
         LocationQuestion(),
         BedroomsQuestion(),
         PriceQuestion(),
         LeaseStartQuestion(),
         PetsQuestion(),
-        SendApartmentSuggestion,
+        SendApartmentSuggestion(),
         AskPhoneNumberQuestion(),
     ]
 
