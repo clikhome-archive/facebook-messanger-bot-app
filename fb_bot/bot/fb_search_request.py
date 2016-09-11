@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 import logging
-import os
 
-from fb_bot.bot.questions import BadAnswer, ImmediateReply, get_questions_list, BaseQuestion
+from fb_bot.bot.questions import get_questions_list, BaseQuestion
 from fb_bot import shared_tasks
 
 log = logging.getLogger('clikhome_fbbot.%s' % __name__)
@@ -31,12 +30,7 @@ class FbSearchRequest(object):
         else:
             self.current_question = None
 
-        # self.current_question.activate()
         return self.current_question
-
-    def lookup_next_question(self):
-        if self.questions_unanswered_list:
-            return self.questions_unanswered_list[0]
 
     @property
     def filter_params(self):
@@ -50,15 +44,6 @@ class FbSearchRequest(object):
                 assert key not in result
                 result[key] = value
         return result
-
-    def set_answer(self, answer):
-        try:
-            reply = self.current_question.set_answer(answer)
-            if reply:
-                return reply
-        except BadAnswer, e:
-            # if raise ImmediateReply we not ask next question
-            raise ImmediateReply(e.message)
 
     def request_search_results(self):
         filter_params = dict(self.filter_params)

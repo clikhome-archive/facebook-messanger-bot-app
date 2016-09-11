@@ -13,18 +13,6 @@ from fb_bot.models import PhoneNumber
 log = logging.getLogger('clikhome_fbbot.%s' % __name__)
 
 
-class ImmediateReply(Exception):
-    pass
-
-
-class BadAnswer(Exception):
-    pass
-
-
-class GoToFinish(Exception):
-    pass
-
-
 class BaseQuestion(object):
     question = None
     answer_matcher = re.compile(r'.+', re.IGNORECASE)
