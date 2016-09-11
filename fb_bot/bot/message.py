@@ -23,7 +23,7 @@ def reply(recipient, text):
         recipient = messages.Recipient(recipient_id=recipient)
     message = messages.Message(text=text)
     request = messages.MessageRequest(recipient, message)
-    messenger.send(request)
+    return messenger.send(request)
 
 
 class Message(object):

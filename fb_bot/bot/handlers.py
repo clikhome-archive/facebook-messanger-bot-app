@@ -4,69 +4,36 @@ import logging
 import re
 
 from fb_bot.bot.decorators import respond_to
-from fb_bot.bot.questions import ImmediateReply
-from fb_bot.bot import questions
+from fb_bot.bot.ctx import session, search_request as sr
 
 log = logging.getLogger('clikhome_fbbot.%s' % __name__)
 
 
-def _set_answer(message, sr):
-    text = message.text
-    q = sr.current_question
-    if not q:
-        message.reply('Bad command "{}"'.format(text))
-    elif isinstance(q, questions.Greeting):
-        message.reply(sr.next_question().question)
-    else:
-        try:
-            reply = sr.set_answer(text)
-            if reply:
-                message.reply(reply)
-        except ImmediateReply, e:
-            message.reply(e.message)
-        else:
-            ask_question(message, sr)
-
-
-def ask_question(message, sr, question_text=None):
-    q = sr.next_question()
-    if isinstance(q, questions.SendApartmentSuggestion):
-        sr.request_search_results()
-    elif isinstance(q, questions.Greeting):
-        message.reply(unicode(q.greeting))
-    else:
-        if question_text:
-            message.reply(question_text)
-        elif not q.skip_ask:
-            message.reply(q.question)
-
-
 @respond_to('^reset|again|restart$', re.IGNORECASE)
-def restart(message, sr):
+def restart(message):
     sr.reset()
-    ask_question(message, sr)
+    sr.next_question().activate()
 
 
-# @respond_to('^Hi|Hey|Hello|ClikHome|help$', re.IGNORECASE)
-# def hi(message, sr):
-#     sr.reset()
-#     ask_question(message, sr)
-
-
-def default_handler(message, sr):
+def default_handler(message):
     if sr.current_question is None:
-        ask_question(message, sr)
-    else:
-        _set_answer(message, sr)
+        sr.next_question().activate()
+    elif sr.current_question.wait_for_answer:
+        sr.current_question.set_answer(message.text)
+
+    if sr.current_question is None:
+        return
+    elif not sr.current_question.wait_for_answer:
+        sr.next_question().activate()
 
 
 @respond_to('^!hey$', re.IGNORECASE)
-def hey(message, sr):
+def hey(message):
     # eggplant
-    message.reply('\U0001F346')
+    session.reply('\U0001F346')
 
 
 @respond_to('^!secret500$', re.IGNORECASE)
-def secret500(message, sr):
-    message.reply('%s' % (1/0))
+def secret500(message):
+    session.reply('%s' % (1/0))
 

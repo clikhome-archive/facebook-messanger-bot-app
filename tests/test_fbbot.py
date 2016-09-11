@@ -91,9 +91,10 @@ class FbBotTest(BaseTestCase):
         from fb_bot.bot.message import Message
         return Message(wh_msg=self.get_wh_message(text), session=session)
 
-    @patch('fb_bot.shared_tasks.request_simple_listings_search')
+    @patch('clikhome_fbbot.celery.app.send_task')
     @patch.object(MessengerClient, 'send')
     @override_settings(
+        FBBOT_MSG_EXPIRE=9000,
         CACHES={
             'default': {
                 'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
@@ -101,36 +102,65 @@ class FbBotTest(BaseTestCase):
             }
         }
     )
-    def test_all_handlers(self, mock_messenger_client_send, mock_request_listings_search_task):
+    def test_all_handlers(self, mock_messenger_client_send, mock_celery_send_task):
+        self._test_handlers(mock_messenger_client_send, mock_celery_send_task)
+
+    def _test_handlers(self, mock_messenger_client_send, mock_celery_send_task):
         from fb_bot.bot.chat_session import ChatSession
         from fb_bot.bot.ctx import set_chat_context
         from fb_bot.bot import questions
+        from fb_bot.models import PhoneNumber
 
         def send_logger(message):
             print 'Send: %r to %r' % (message.message.text, message.recipient.recipient_id)
 
-        entry_handler = EntryHandler()
+        def assert_greetings(message):
+            send_logger(message)
+            self.assertEqual(questions.Greeting().greeting, message.message.text)
 
         with ChatSession('100009095718696') as session, set_chat_context(session):
-            message = self.get_wh_message('Hi')
+            user_input = lambda text: entry_handler._handle_message(self.get_wh_message(text), session)
 
-            def assert_greetings(message):
-                assert message.message.text == questions.Greeting().greeting
-                send_logger(message)
+            entry_handler = EntryHandler()
 
             mock_messenger_client_send.side_effect = assert_greetings
-
-            entry_handler._handle_message(message, session)
+            user_input('Hi')
             mock_messenger_client_send.assert_called_once()
             mock_messenger_client_send.side_effect = send_logger
 
-            entry_handler._handle_message(self.get_wh_message('Fine'), session)
-            entry_handler._handle_message(self.get_wh_message('Iowa'), session)
-            entry_handler._handle_message(self.get_wh_message('studio'), session)
-            entry_handler._handle_message(self.get_wh_message('9000'), session)
-            entry_handler._handle_message(self.get_wh_message('today'), session)
-            entry_handler._handle_message(self.get_wh_message('no'), session)
-            mock_request_listings_search_task.assert_called_once()
+            user_input('Fine')
+            user_input('Iowa')
+            user_input('studio')
+            user_input('9000')
+            user_input('today')
+            user_input('no')
+
+            mock_celery_send_task.assert_called_once()
+
+            user_input('yes')
+            phone_number = '+155555555'
+            user_input(phone_number)
+            self.assertGreaterEqual(PhoneNumber.objects.filter(phone=phone_number).count(), 1)
+
+            # Session 2
+            self.assertEqual(session.search_request.current_question, None)
+
+    @patch('clikhome_fbbot.celery.app.send_task')
+    @patch.object(MessengerClient, 'send')
+    @override_settings(
+        FBBOT_MSG_EXPIRE=9000,
+        CACHES={
+            'default': {
+                'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+                'LOCATION': 'unique-snowflake'
+            }
+        }
+    )
+    def test_reusable_chat_sessions(self, mock_messenger_client_send, mock_celery_send_task):
+        for x in xrange(0, 5):
+            mock_messenger_client_send.reset_mock()
+            mock_celery_send_task.reset_mock()
+            self._test_handlers(mock_messenger_client_send, mock_celery_send_task)
 
     def test_session_local(self):
         from fb_bot.bot.chat_session import ChatSession

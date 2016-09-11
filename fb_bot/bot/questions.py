@@ -1,10 +1,16 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, unicode_literals
+import json
+import logging
+
 import re
 from timestring import Range, TimestringInvalid
 
 from clikhome_fbbot.utils import geolocator
-from fb_bot.bot.ctx import get_current_session
+from fb_bot.bot.ctx import session
+from fb_bot.models import PhoneNumber
+
+log = logging.getLogger('clikhome_fbbot.%s' % __name__)
 
 
 class ImmediateReply(Exception):
@@ -27,10 +33,14 @@ class BaseQuestion(object):
     param_value = None
     skip_ask = False
     answer = None
+    wait_for_answer = False
 
     @property
     def value(self):
         return self.param_value
+
+    def activate(self):
+        raise NotImplemented()
 
     @property
     def filter_value(self):
@@ -56,6 +66,10 @@ class LocationQuestion(BaseQuestion):
     }
     skip_ask = True
 
+    def activate(self):
+        session.reply(self.question)
+        self.wait_for_answer = True
+
     @property
     def filter_value(self):
         return {
@@ -68,9 +82,10 @@ class LocationQuestion(BaseQuestion):
         if bbox:
             self.param_value = bbox
             self.answer = answer
-            return 'Ok, we are going to "%s"' % bbox.formatted_address
+            self.wait_for_answer = False
+            session.reply('Ok, we are going to "%s"' % bbox.formatted_address)
         else:
-            raise BadAnswer(self.messages['location_not_found'].format(answer=answer))
+            session.reply(self.messages['location_not_found'].format(answer=answer))
 
 
 class BedroomsQuestion(BaseQuestion):
@@ -84,6 +99,10 @@ class BedroomsQuestion(BaseQuestion):
             bedrooms=self.param_value
         )
 
+    def activate(self):
+        session.reply(self.question)
+        self.wait_for_answer = True
+
     def set_answer(self, answer):
         # TODO: may be we should accept answers like 'any'?
         # TODO: convert words to numbers
@@ -91,9 +110,10 @@ class BedroomsQuestion(BaseQuestion):
             answer = '0'
 
         if not self.answer_matcher.match(answer):
-            raise BadAnswer(self.answer_bad_message.format(answer=answer))
-
-        self.param_value = answer
+            session.reply(self.answer_bad_message.format(answer=answer))
+        else:
+            self.param_value = answer
+            self.wait_for_answer = False
 
 
 class PriceQuestion(BaseQuestion):
@@ -107,13 +127,19 @@ class PriceQuestion(BaseQuestion):
             price_range=[self.param_value, self.param_value]
         )
 
+    def activate(self):
+        session.reply(self.question)
+        self.wait_for_answer = True
+
     def set_answer(self, answer):
         # TODO: convert words to numbers
         # TODO: accept ranges
         answer = re.sub('\D+', '', answer)
         if not self.answer_matcher.match(answer):
-            raise BadAnswer(self.answer_bad_message.format(answer=answer))
-        self.param_value = answer
+            session.reply(self.answer_bad_message.format(answer=answer))
+        else:
+            self.param_value = answer
+            self.wait_for_answer = False
 
 
 class LeaseStartQuestion(BaseQuestion):
@@ -124,6 +150,10 @@ class LeaseStartQuestion(BaseQuestion):
         'bad_date': """Sorry, I can't understand this date: '{answer}'"""
     }
 
+    def activate(self):
+        session.reply(self.question)
+        self.wait_for_answer = True
+
     @property
     def filter_value(self):
         return dict(lease_range=self.param_value)
@@ -133,7 +163,9 @@ class LeaseStartQuestion(BaseQuestion):
             value = Range(answer)
             self.param_value = map(lambda d: d.date, value._dates)
         except TimestringInvalid:
-            raise BadAnswer(self.answer_bad_message.format(answer=answer))
+            session.reply(self.answer_bad_message.format(answer=answer))
+        else:
+            self.wait_for_answer = False
 
 
 class DogWeighAdditionalQuestion(BaseQuestion):
@@ -144,6 +176,10 @@ class DogWeighAdditionalQuestion(BaseQuestion):
     def __init__(self, parent):
         self.parent = parent
         self.answer = None
+
+    def activate(self):
+        session.reply(self.question)
+        self.wait_for_answer = True
 
     @property
     def value(self):
@@ -157,8 +193,10 @@ class DogWeighAdditionalQuestion(BaseQuestion):
     def set_answer(self, answer):
         answer = answer.strip().lower()
         if not self.answer_matcher.match(answer):
-            raise BadAnswer(self.answer_bad_message.format(answer=answer))
-        self.answer = answer
+            session.reply(self.answer_bad_message.format(answer=answer))
+        else:
+            self.answer = answer
+            self.wait_for_answer = False
 
 
 class PetsQuestion(BaseQuestion):
@@ -167,6 +205,10 @@ class PetsQuestion(BaseQuestion):
     answer_matcher = re.compile(r'^no|dog|cat$', re.IGNORECASE)
     answer_bad_message = 'Sorry, "{answer}" is a bad answer, please choose: No, Dog, Cat'
     additional_question = None
+
+    def activate(self):
+        session.reply(self.question)
+        self.wait_for_answer = True
 
     @property
     def filter_value(self):
@@ -181,15 +223,18 @@ class PetsQuestion(BaseQuestion):
         if self.additional_question:
             self.additional_question.set_answer(answer)
             self.param_value['dog_have_weigh_gte_25lbs'] = self.additional_question.value
+            self.wait_for_answer = False
             return
 
         if not self.answer_matcher.match(answer):
-            raise BadAnswer(self.answer_bad_message % dict(answer=answer))
+            session.reply(self.answer_bad_message.format(answer=answer))
+            return
 
         pet_type = answer.strip().lower()
 
         if pet_type == 'no':
             self.param_value = pet_type
+            self.wait_for_answer = False
         else:
             self.param_value = pet_type
             self.param_value = {
@@ -198,35 +243,47 @@ class PetsQuestion(BaseQuestion):
             }
             if self.param_value['pet_type'] == 'dog':
                 self.additional_question = DogWeighAdditionalQuestion(parent=self)
-                raise ImmediateReply(self.additional_question.question)
+                session.reply(self.additional_question.question)
+                self.wait_for_answer = True
+            else:
+                self.wait_for_answer = False
 
 
 class AskPhoneNumberQuestion(BaseQuestion):
     answer_matcher = re.compile(r'^yes|no|y|n$', re.IGNORECASE)
     answer_bad_message = 'Sorry, "{answer}" is a bad answer, please choose yes/y or no/n.'
     question = 'Would you consider this apartment? We want to make sure that we are on the right track.'
-    phone_number = None
+
+    def activate(self):
+        session.reply(self.question)
+        self.wait_for_answer = True
 
     def set_answer(self, answer):
         if self.answer:
-            # TODO: save the data
-            self.phone_number = answer
-            return 'Thank you. Have a good day.'
+            log.info('Accept phone number: %r' % answer)
+            PhoneNumber.objects.create(
+                sender=session.user_id,
+                sender_data=json.dumps(session.data.get('user_profile', [])),
+                phone=answer
+            )
+            self.wait_for_answer = False
+            session.reply('Thank you. Have a good day.')
+            session.search_request.reset()
         else:
             answer = answer.strip().lower()
             if not self.answer_matcher.match(answer):
-                raise BadAnswer(self.answer_bad_message % dict(answer=answer))
+                session.reply(self.answer_bad_message.format(answer=answer))
+                return
 
             self.answer = answer
-
             if self.answer == 'yes':
-                raise ImmediateReply(
+                session.reply(
                     'Perfect, we will process your request and our operation manager '
                     'will get back to you with your apartment recommendations shortly. '
                     'What is your phone number and email address we can contact you on?'
                 )
             elif self.answer == 'no':
-                raise ImmediateReply(
+                session.reply(
                     'No problem, we will process your request and our operation manager '
                     'will get back to you with apartment recommendations that better fit your criteria.'
                     ' What is your phone number and email address we can contact you on?'
@@ -235,17 +292,28 @@ class AskPhoneNumberQuestion(BaseQuestion):
 
 class Greeting(object):
     _greeting = 'Hi {user_first_name}! This is Mary with Apartment Ocean. How are you?'
+    wait_for_answer = False
+
+    def set_answer(self, answer):
+        self.wait_for_answer = False
 
     @property
     def greeting(self):
-        session = get_current_session()
         return self._greeting.format(user_first_name=session.user_first_name)
+
+    def activate(self):
+        session.reply(self.greeting)
+        self.wait_for_answer = True
 
 
 class SendApartmentSuggestion(object):
+    wait_for_answer = False
 
     def set_answer(self, answer):
         pass
+
+    def activate(self):
+        session.search_request.request_search_results()
 
 
 def get_questions_list():

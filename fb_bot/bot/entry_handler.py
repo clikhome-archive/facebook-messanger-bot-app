@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 import datetime
+import os
 import logging
 from threading import Lock
 
@@ -8,12 +9,14 @@ from django.conf import settings
 from hotqueue import HotQueue
 from redis.connection import ConnectionPool
 from raven.contrib.django.raven_compat.models import client as raven_client
+import aiml
 
 from fb_bot.bot.chat_lock import ChatLock
 from fb_bot.bot.chat_session import ChatSession
 from fb_bot.bot.ctx import set_chat_context
 from fb_bot.bot.manager import Manager
 from fb_bot.bot.message import Message
+from fb_bot.bot.signals import handler_before_call
 from fb_bot.models import ChatLog
 from fb_bot.tasks import handle_entry_queue
 
@@ -29,6 +32,13 @@ class EntryHandler(object):
         self.default_handler = handlers.default_handler
         self.current_session = None
         self.sync_lock = Lock()
+        # self.aiml = aiml.Kernel()
+        # aiml_file = os.path.join(os.path.dirname(__file__), 'questions.xml')
+        # aiml_file = os.path.join(os.path.dirname(__file__), 'hello.xml')
+        # self.aiml.learn(aiml_file)
+
+    # def aiml_respond(self, input):
+    #     return self.aiml.respond(input)
 
     def _handle_message(self, msg, session):
         """
@@ -72,10 +82,12 @@ class EntryHandler(object):
                     # if sr.is_waiting_for_results and not msg_obj.text.startswith(('@', '!')):
                     #     log.warn('Drop message %r when is_waiting_for_results=True' % msg_obj)
                     #     continue
-                    cb(msg_obj, sr)
+                    log.debug('Call %s:%s with text %r' % (cb.__name__, sr.current_question.__class__.__name__, text))
+                    handler_before_call.send(self, handler_cb=cb, message=msg_obj, text=text)
+                    cb(msg_obj)
                 except Exception, e:
                     raven_client.captureException()
-                    log.exception(e, dict(cb=cb, text=text, user_id=msg_obj.sender_id))
+                    log.exception(dict(cb=cb, text=text, user_id=msg_obj.sender_id))
 
     def _get_receivers(self, text):
         has_matching = False

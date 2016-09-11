@@ -2,7 +2,6 @@
 from __future__ import absolute_import
 import logging
 import os
-import aiml
 
 from fb_bot.bot.questions import BadAnswer, ImmediateReply, get_questions_list, BaseQuestion
 from fb_bot import shared_tasks
@@ -18,9 +17,6 @@ class FbSearchRequest(object):
         self.questions_answered_list = list()
         self.current_question = None
         self.is_waiting_for_results = False
-        # self.aiml = aiml.Kernel()
-        # aiml_file = os.path.join(os.path.dirname(__file__), 'questions.xml')
-        # self.aiml.learn(aiml_file)
         self.reset()
 
     def reset(self):
@@ -34,6 +30,8 @@ class FbSearchRequest(object):
             self.questions_answered_list.append(self.current_question)
         else:
             self.current_question = None
+
+        # self.current_question.activate()
         return self.current_question
 
     def lookup_next_question(self):
@@ -48,7 +46,7 @@ class FbSearchRequest(object):
                 continue
 
             for key, value in q.filter_value.items():
-                self.log('[%s] set param %s="%r" from ' % (q.__class__.__name__, key, value))
+                # self.log('[%s] set param %s="%r" from ' % (q.__class__.__name__, key, value))
                 assert key not in result
                 result[key] = value
         return result
@@ -87,4 +85,8 @@ class FbSearchRequest(object):
         log.debug('%s: %s current_question: %r' % (self, msg, self.current_question))
 
     def __repr__(self):
-        return '<FbSearchRequest u=%s>' % self.user_id
+        if self.current_question:
+            current_question = self.current_question.__class__.__name__
+        else:
+            current_question = None
+        return '<FbSearchRequest u=%s q=%s>' % (self.user_id, current_question)

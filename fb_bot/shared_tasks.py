@@ -11,13 +11,14 @@ TASK_OPTIONS = dict(max_retries=0, queue='default')
 
 def request_simple_listings_search(**kwargs):
     from django.conf import settings
-    from fb_bot.tasks import return_simple_search_results
 
     task = app.send_task(
         'bridge.fbbot_tasks.fbbot_simple_listings_search',
         kwargs=kwargs, **TASK_OPTIONS)
 
+    # only for tests
     if getattr(settings, 'CELERY_ALWAYS_EAGER', False):
+        from fb_bot.tasks import return_simple_search_results
         with open(os.path.join(
             os.path.dirname(__file__),
             '..',
