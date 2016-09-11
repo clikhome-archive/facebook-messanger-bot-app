@@ -10,7 +10,7 @@ https://docs.djangoproject.com/en/1.8/howto/deployment/wsgi/
 import os
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'clikhome_fbbot.settings')
 # os.environ.setdefault('DJANGO_CONFIGURATION', 'Dev')
-
 from configurations.wsgi import get_wsgi_application
+from dj_static import Cling
 
-application = get_wsgi_application()
+application = Cling(get_wsgi_application())
