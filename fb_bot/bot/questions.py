@@ -241,9 +241,18 @@ class AskPhoneNumberQuestion(BaseQuestion):
     answer_matcher = re.compile(r'^yes|no|y|n$', re.IGNORECASE)
     answer_bad_message = 'Sorry, "{answer}" is a bad answer, please choose yes/y or no/n.'
     question = 'Would you consider this apartment? We want to make sure that we are on the right track.'
+    bad_request_text = (
+        'I can connect you with our operation manager who will give you more information. '
+        'I apologize for any inconvenience. '
+        'What is the phone number or email address our operation manager can contact you on?'
+        'Thank you, we will be in touch.'
+    )
 
-    def activate(self):
-        session.reply(self.question)
+    def activate(self, is_bad_request=False):
+        if is_bad_request:
+            session.reply(self.bad_request_text)
+        else:
+            session.reply(self.question)
         self.wait_for_answer = True
 
     def set_answer(self, answer):

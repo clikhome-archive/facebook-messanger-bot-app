@@ -27,5 +27,5 @@ def return_simple_search_results(user_id, listings):
             sr.next_question().activate()
         else:
             log.debug('No results for %s' % sr)
-            # TODO: handle it
             session.reply("Sorry, we can't find any listing with this criteria.")
+            sr.next_question().activate(is_bad_request=True)
