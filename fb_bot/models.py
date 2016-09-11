@@ -4,7 +4,7 @@ from django_extensions.db.models import TimeStampedModel
 
 class PhoneNumber(TimeStampedModel):
     sender = models.CharField(max_length=255, db_index=True)
-    sender_data = models.CharField(max_length=255)
+    sender_data = models.TextField()
     phone = models.CharField(max_length=255, db_index=True)
 
 

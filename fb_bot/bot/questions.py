@@ -249,14 +249,16 @@ class AskPhoneNumberQuestion(BaseQuestion):
     def set_answer(self, answer):
         if self.answer:
             log.info('Accept phone number: %r' % answer)
-            PhoneNumber.objects.create(
-                sender=session.user_id,
-                sender_data=json.dumps(session.data.get('user_profile', [])),
-                phone=answer
-            )
-            self.wait_for_answer = False
-            session.reply('Thank you. Have a good day.')
-            session.search_request.reset()
+            try:
+                PhoneNumber.objects.create(
+                    sender=session.user_id,
+                    sender_data=json.dumps(session.data.get('user_profile', [])),
+                    phone=answer
+                )
+            finally:
+                self.wait_for_answer = False
+                session.reply('Thank you. Have a good day.')
+                session.search_request.reset()
         else:
             answer = answer.strip().lower()
             if not self.answer_matcher.match(answer):
