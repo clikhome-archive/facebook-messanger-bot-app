@@ -116,7 +116,7 @@ class EntryHandler(object):
             # TODO: use Kombu exclusive queue?
             # http://docs.celeryproject.org/projects/kombu/en/latest/reference/kombu.html#kombu.Queue.exclusive
             q = HotQueue(queue_name, **redis_kwargs)
-            with ChatSession(sender_id) as session:
+            with ChatSession(sender_id) as session, set_chat_context(session):
                 while True:
                     has_entry = False
                     for entry in q.consume(timeout=timeout):
