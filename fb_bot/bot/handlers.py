@@ -9,7 +9,7 @@ from fb_bot.bot.ctx import session, search_request as sr
 log = logging.getLogger('clikhome_fbbot.%s' % __name__)
 
 
-@respond_to('^reset|again|restart$', re.IGNORECASE)
+@respond_to('^reset|again|restart|hey|hello|hi|mary$', re.IGNORECASE)
 def restart(message):
     sr.reset()
     sr.next_question().activate()

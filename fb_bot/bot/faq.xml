@@ -1,0 +1,130 @@
+<aiml version="1.0.1" encoding="UTF-8">
+    <!-- faq.aiml -->
+    <!-- programs, program, voucher, Section 8, Linc, Feps, Hasa -->
+
+    <category>
+        <pattern>* COMMISSION</pattern>
+        <template>
+            <srai>FEE</srai>
+        </template>
+    </category>
+
+    <category>
+        <pattern>* CHARGE</pattern>
+        <template>
+            <srai>FEE</srai>
+        </template>
+    </category>
+
+    <category>
+        <pattern>* COST</pattern>
+        <template>
+            <srai>FEE</srai>
+        </template>
+    </category>
+
+    <category>
+        <pattern>* FEE</pattern>
+        <template>
+            <srai>FEE</srai>
+        </template>
+    </category>
+
+    <category>
+        <pattern>FEE</pattern>
+        <template>
+            We charge a service fee of 5% of annual rent after you sign the lease. Service fee covers apartment search,
+            apartment showings and help with the application.
+        </template>
+    </category>
+
+    <category>
+        <pattern>PROGRAMS</pattern>
+        <template>
+            We can find apartments that accept programs as well.
+        </template>
+    </category>
+    <category>
+        <pattern>* PROGRAMS</pattern>
+        <template>
+            <srai>PROGRAMS</srai>
+        </template>
+    </category>
+
+    <category>
+        <pattern>DO YOU TAKE SECTION 8</pattern>
+        <template>
+            <srai>PROGRAMS</srai>
+        </template>
+    </category>
+
+    <category>
+        <pattern>DO YOU ACCEPT ANY PROGRAMS</pattern>
+        <template>
+            <srai>PROGRAMS</srai>
+        </template>
+    </category>
+
+    <category>
+        <pattern>* VOUCHER</pattern>
+        <template>
+            <srai>PROGRAMS</srai>
+        </template>
+    </category>
+
+    <category>
+        <pattern>* FEPS</pattern>
+        <template>
+            <srai>PROGRAMS</srai>
+        </template>
+    </category>
+
+    <category>
+        <pattern>* HASA</pattern>
+        <template>
+            <srai>PROGRAMS</srai>
+        </template>
+    </category>
+
+    <category>
+        <pattern>* SECTION 8</pattern>
+        <template>
+            <srai>PROGRAMS</srai>
+        </template>
+    </category>
+
+    <category>
+        <pattern>WHAT ARE YOU</pattern>
+        <template>
+            <srai>ARE YOU A BOT</srai>
+        </template>
+    </category>
+
+    <category>
+        <pattern>WHO ARE YOU</pattern>
+        <template>
+            <srai>ARE YOU A BOT</srai>
+        </template>
+    </category>
+
+    <category>
+        <pattern>* ROBOT</pattern>
+        <template>
+            <srai>ARE YOU A BOT</srai>
+        </template>
+    </category>
+
+    <category>
+        <pattern>* CHATBOT</pattern>
+        <template>
+            <srai>ARE YOU A BOT</srai>
+        </template>
+    </category>
+
+    <category>
+        <pattern>ARE YOU A BOT</pattern>
+        <template>
+            My name is Mary and I am a customer representative at Apartment Ocean
+        </template>
+    </category>
+</aiml>

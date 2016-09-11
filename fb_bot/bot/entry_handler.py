@@ -32,13 +32,12 @@ class EntryHandler(object):
         self.default_handler = handlers.default_handler
         self.current_session = None
         self.sync_lock = Lock()
-        # self.aiml = aiml.Kernel()
-        # aiml_file = os.path.join(os.path.dirname(__file__), 'questions.xml')
-        # aiml_file = os.path.join(os.path.dirname(__file__), 'hello.xml')
-        # self.aiml.learn(aiml_file)
+        self.aiml = aiml.Kernel()
+        aiml_file = os.path.join(os.path.dirname(__file__), 'faq.xml')
+        self.aiml.learn(aiml_file)
 
-    # def aiml_respond(self, input):
-    #     return self.aiml.respond(input)
+    def aiml_respond(self, input):
+        return self.aiml.respond(input)
 
     def _handle_message(self, msg, session):
         """
@@ -66,17 +65,14 @@ class EntryHandler(object):
             text=text
         )
         msg_obj = Message(msg, session)
+        with msg_obj.session as session:
+            respond = self.aiml_respond(text)
+            if respond:
+                session.reply(respond.strip().replace('  ', ' '))
+                return
 
-        for cb, _ in self._get_receivers(msg_obj.text):
-            if cb:
-                if msg_obj.text.startswith('@') and int(msg_obj.sender_id) not in self.admin_ids:
-                    log.warn('Deny access to admin command %r for %r' % (msg_obj.text, msg_obj.sender_id))
-                    msg_obj.reply('Access denied for %r' % cb.__name__)
-                    continue
-            else:
-                cb = self.default_handler
-
-            with msg_obj.session as session:
+            for cb, _ in self._get_receivers(msg_obj.text):
+                cb = cb or self.default_handler
                 try:
                     sr = session.search_request
                     # if sr.is_waiting_for_results and not msg_obj.text.startswith(('@', '!')):
