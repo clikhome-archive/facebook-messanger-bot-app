@@ -13,7 +13,6 @@ def handle_entry_queue(queue_name):
 def return_simple_search_results(user_id, listings):
     from fb_bot.bot.ctx import set_chat_context
     from fb_bot.bot.chat_session import ChatSession
-    from fb_bot.bot.message import attachment_reply
     from fb_bot.bot import templates
     from fb_bot.bot.handlers import log
 
@@ -22,7 +21,7 @@ def return_simple_search_results(user_id, listings):
         sr.is_waiting_for_results = False
         if listings:
             attachment = templates.get_results_attachment(listings)
-            attachment_reply(user_id, attachment)
+            session.attachment_reply(attachment)
             log.debug('Return results for %s' % sr)
             sr.next_question().activate()
         else:

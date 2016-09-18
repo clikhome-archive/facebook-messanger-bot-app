@@ -5,6 +5,23 @@ from django.utils.text import Truncator
 from messengerbot import attachments, elements, templates
 
 
+def make_button_choices(text, choices):
+    postback_buttons = list()
+    for button_text in choices:
+        postback_buttons.append(
+            elements.PostbackButton(
+                title=button_text,
+                payload='USER_DEFINED_PAYLOAD'
+            )
+        )
+
+    template = templates.ButtonTemplate(
+       text=text,
+       buttons=postback_buttons
+    )
+    return attachments.TemplateAttachment(template=template)
+
+
 def get_results_attachment(listings_data_items, more_url=None):
     tpl_elements = list()
     for listing_d in listings_data_items:

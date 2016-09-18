@@ -27,7 +27,7 @@ ipython==4.2.0
 ipython-genutils==0.1.0
 kombu==3.0.35
 -e git+https://heroku-clikhome:HRzOTVyU0laV0tIMnA2NFZiR3VQMj@github.com/ClikHome/clikhome-shared.git@master#egg=clikhome-shared
--e git+https://github.com/geeknam/messengerbot.git@1786695ff43034c3d548e5fd222661480dd4bbb7#egg=messengerbot
+messengerbot==0.1.4
 -e git+https://github.com/andelf/PyAIML.git@master#egg=PyAIML
 pytz==2016.4
 timestring==1.6.2
@@ -44,7 +44,7 @@ python-redis-lock==3.0.0
 pytz==2016.4
 raven==5.18.0
 redis==2.10.5
-requests==2.10.0
+requests==2.11.1
 requests-facebook==0.4.0
 simplegeneric==0.8.1
 six==1.10.0

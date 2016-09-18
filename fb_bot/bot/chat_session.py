@@ -6,7 +6,7 @@ import threading
 from django.conf import settings
 from django.core.cache import caches
 from facebook import GraphAPI
-from fb_bot.bot.message import reply as send_message
+from fb_bot.bot import messenger_client
 from fb_bot.bot.fb_search_request import FbSearchRequest
 
 log = logging.getLogger('clikhome_fbbot.%s' % __name__)
@@ -60,7 +60,10 @@ class ChatSession(object):
             return self.data['user_profile']['name'].split(' ', 1)[0]
 
     def reply(self, text):
-        return send_message(self.user_id, text)
+        return messenger_client.send_message(self.user_id, text)
+
+    def attachment_reply(self, attachment):
+        return messenger_client.send_attachment_reply(self.user_id, attachment)
 
     def __enter__(self):
         # Check session in local thread first
