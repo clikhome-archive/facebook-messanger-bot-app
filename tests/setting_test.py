@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import os
 from configurations.utils import uppercase_attributes
 from configurations.values import setup_value, Value
 
@@ -15,7 +16,7 @@ class Test(Common):
     CELERY_ALWAYS_EAGER = True
     CELERY_EAGER_PROPAGATES_EXCEPTIONS = True
 
-    REDIS_URL = 'redis://none:6379/1'
+    REDIS_URL = os.getenv('REDIS_URL', 'redis://192.168.99.100:6379/4')
 
     DATABASES = {
         'default': {

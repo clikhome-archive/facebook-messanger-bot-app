@@ -1,6 +1,10 @@
 machine:
   python:
     version: 2.7.11
+  services:
+    - redis
+  environment:
+      REDIS_URL: redis://127.0.0.1:6379/1
 
 dependencies:
   pre:

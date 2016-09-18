@@ -5,14 +5,15 @@ import os
 import logging
 from threading import Lock
 
+import redis
 from django.conf import settings
 from hotqueue import HotQueue
-from redis.connection import ConnectionPool
 from raven.contrib.django.raven_compat.models import client as raven_client
 import aiml
 
 from fb_bot.bot.chat_lock import ChatLock
 from fb_bot.bot.chat_session import ChatSession
+from fb_bot.bot.globals import redis_connection_pool
 from fb_bot.bot.ctx import set_chat_context
 from fb_bot.bot.manager import Manager
 from fb_bot.bot.message import Message
@@ -24,7 +25,6 @@ log = logging.getLogger('clikhome_fbbot.%s' % __name__)
 
 
 class EntryHandler(object):
-    redis_url = settings.REDIS_URL
     admin_ids = map(int, settings.FBBOT_ADMINS_IDS)
 
     def __init__(self):
@@ -49,7 +49,8 @@ class EntryHandler(object):
         now = datetime.datetime.utcnow()
         delta = (now - msg.timestamp)
         if delta.seconds >= settings.FBBOT_MSG_EXPIRE:
-            log_message = 'Drop expired message, delta=%s' % delta.seconds
+            log_message = 'Drop expired message, delta={delta}, limit={limit}'.format(delta=delta.seconds,
+                                                                                      limit=settings.FBBOT_MSG_EXPIRE)
             ChatLog.objects.create(
                 recipient=msg.sender.recipient_id,
                 type='in',
@@ -100,18 +101,17 @@ class EntryHandler(object):
 
     def handle_entry_queue(self, queue_name):
         handled_count = 0
-        chat_lock = ChatLock(queue_name)
+        chat_lock = ChatLock(redis.Redis(connection_pool=redis_connection_pool), queue_name)
         if chat_lock.is_locked:
             return False
         sender_id = queue_name.split('-')[-1]
 
         with chat_lock as _:
             timeout = 3
-            redis_kwargs = dict(connection_pool=ConnectionPool.from_url(self.redis_url))
 
             # TODO: use Kombu exclusive queue?
             # http://docs.celeryproject.org/projects/kombu/en/latest/reference/kombu.html#kombu.Queue.exclusive
-            q = HotQueue(queue_name, **redis_kwargs)
+            q = HotQueue(queue_name, connection_pool=redis_connection_pool)
             with ChatSession(sender_id) as session, set_chat_context(session):
                 while True:
                     has_entry = False
@@ -131,15 +131,13 @@ class EntryHandler(object):
     @classmethod
     def add_to_queue(cls, message_entries, async=True):
         if async:
-            connection_pool = ConnectionPool.from_url(cls.redis_url)
-            redis_kwargs = dict(connection_pool=connection_pool)
             queues = dict()
 
             for sender_id, messages in message_entries.items():
                 queues.setdefault(sender_id, None)
                 queue_name = 'fb-bot-chat-%s' % sender_id
                 if not queues[sender_id]:
-                    queues[sender_id] = HotQueue(queue_name, **redis_kwargs)
+                    queues[sender_id] = HotQueue(queue_name, connection_pool=redis_connection_pool)
                 queues[sender_id].put(*messages)
                 handle_entry_queue.delay(queue_name)
         else:

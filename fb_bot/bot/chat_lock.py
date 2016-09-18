@@ -1,26 +1,22 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 import logging
-import redis
 import redis_lock
-
-from django.conf import settings
 
 log = logging.getLogger('clikhome_fbbot.%s' % __name__)
 
 
 class ChatLock(object):
-    redis_url = settings.REDIS_URL
 
-    def __init__(self, lock_id, expire=4):
+    def __init__(self, redis_client, lock_id, expire=4):
+        self.redis_client = redis_client
         self.lock_key = 'chatlock-%s' % lock_id
         self.expire = expire
         self._lock = None
-        self.conn = redis.StrictRedis.from_url(self.redis_url)
 
     @property
     def is_locked(self):
-        if self.conn.get('lock:'+self.lock_key):
+        if self.redis_client.get('lock:'+self.lock_key):
             return True
         else:
             return False
@@ -28,7 +24,7 @@ class ChatLock(object):
     @property
     def lock(self):
         if not self._lock:
-            self._lock = redis_lock.Lock(self.conn, self.lock_key, expire=3, auto_renewal=True)
+            self._lock = redis_lock.Lock(self.redis_client, self.lock_key, expire=3, auto_renewal=True)
         return self._lock
 
     def __enter__(self):
