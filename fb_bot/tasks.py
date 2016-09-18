@@ -14,14 +14,14 @@ def return_simple_search_results(user_id, listings):
     from fb_bot.bot.ctx import set_chat_context
     from fb_bot.bot.chat_session import ChatSession
     from fb_bot.bot.message import attachment_reply
-    from fb_bot.bot.utils import get_results_attachment
+    from fb_bot.bot import templates
     from fb_bot.bot.handlers import log
 
     with ChatSession(user_id) as session, set_chat_context(session):
         sr = session.search_request
         sr.is_waiting_for_results = False
         if listings:
-            attachment = get_results_attachment(listings)
+            attachment = templates.get_results_attachment(listings)
             attachment_reply(user_id, attachment)
             log.debug('Return results for %s' % sr)
             sr.next_question().activate()
