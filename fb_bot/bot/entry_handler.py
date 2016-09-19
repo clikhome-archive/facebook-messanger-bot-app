@@ -114,21 +114,14 @@ class EntryHandler(object):
         sender_id = queue_name.split('-')[-1]
 
         with chat_lock as _:
-            timeout = 3
-
             # TODO: use Kombu exclusive queue?
             # http://docs.celeryproject.org/projects/kombu/en/latest/reference/kombu.html#kombu.Queue.exclusive
             q = HotQueue(queue_name, connection_pool=redis_connection_pool)
             with ChatSession(sender_id) as session, set_chat_context(session):
-                while True:
-                    has_entry = False
-                    for entry in q.consume(timeout=timeout):
-                        has_entry = True
-                        log.debug('!!!!Get from %d HotQueue %r - %r' % (handled_count, entry, entry._message['text']))
-                        self._handle_message(entry, session)
-                        handled_count += 1
-                    if not has_entry:
-                        break
+                for entry in q.consume(timeout=1):
+                    log.debug('!!!!Get from %d HotQueue %r' % (handled_count, entry.__dict__))
+                    self._handle_message(entry, session)
+                    handled_count += 1
         return handled_count
 
     def handle_entry_sync(self, entry, sender_id):

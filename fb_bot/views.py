@@ -71,4 +71,4 @@ class WebHookView(generic.View):
         else:
             EntryHandler.add_to_queue(entry, async=self.handle_messages_async)
             if mid:
-                self.redis_conn.set('mids-seen:%s' % mid, self.redis_ttl)
+                self.redis_conn.set('mids-seen:%s' % mid, 1, self.redis_ttl)
