@@ -13,7 +13,7 @@ class QuestionsTestCase(BaseTestCase):
     def setUp(self):
         super(QuestionsTestCase, self).setUp()
         from facebook import GraphAPI
-        from messengerbot import MessengerClient
+        from fb_bot.bot.messenger_client import MessengerClient
         from fb_bot.bot.chat_session import ChatSession
         from fb_bot.bot.ctx import set_chat_context, session, search_request
 

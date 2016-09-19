@@ -19,6 +19,7 @@ def return_simple_search_results(user_id, listings):
     with ChatSession(user_id) as session, set_chat_context(session):
         sr = session.search_request
         sr.is_waiting_for_results = False
+        session.send_typing_on()
         if listings:
             attachment = templates.get_results_attachment(listings)
             session.attachment_reply(attachment)
@@ -28,3 +29,4 @@ def return_simple_search_results(user_id, listings):
             log.debug('No results for %s' % sr)
             session.reply("Sorry, we can't find any listing with this criteria.")
             sr.next_question().activate(is_bad_request=True)
+        session.send_typing_off()

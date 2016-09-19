@@ -16,15 +16,20 @@ def restart(message):
 
 
 def default_handler(message):
+    session.send_mark_seen()
+    session.send_typing_on()
+
     if sr.current_question is None:
         sr.next_question().activate()
     elif sr.current_question.wait_for_answer:
         sr.current_question.set_answer(message.text)
 
     if sr.current_question is None:
+        session.send_typing_off()
         return
     elif not sr.current_question.wait_for_answer:
         sr.next_question().activate()
+    session.send_typing_off()
 
 
 @respond_to('^!hey$', re.IGNORECASE)

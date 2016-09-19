@@ -351,6 +351,7 @@ class SendApartmentSuggestion(object):
         pass
 
     def activate(self):
+        session.send_typing_on()
         search_request.request_search_results()
 
 

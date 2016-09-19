@@ -9,7 +9,6 @@ import json
 import pytest
 from clikhome_shared.utils.bbox import Bbox
 from django.test.utils import override_settings
-from messengerbot import MessengerClient
 from mock import patch, MagicMock, Mock
 from facebook import GraphAPI
 
@@ -38,6 +37,8 @@ class FbBotTest(BaseTestCase):
             'ne_lat': 43.5011961
         })
 
+        from fb_bot.bot import messenger_client
+        self.mock_messenger = messenger_client.messenger = MagicMock()
         self.mock_graph_get = patch.object(GraphAPI, 'get').start()
         self.mock_graph_get.return_value = {
             u'name': u'\u0410\u043b\u0435\u043a\u0441\u0435\u0439 \u041a\u043e\u0440\u043e\u0431\u043a\u043e\u0432',
@@ -92,7 +93,6 @@ class FbBotTest(BaseTestCase):
         return Message(wh_msg=self.get_wh_message(text))
 
     @patch('clikhome_fbbot.celery.app.send_task')
-    @patch.object(MessengerClient, 'send')
     @override_settings(
         FBBOT_MSG_EXPIRE=9000,
         CACHES={
@@ -102,10 +102,10 @@ class FbBotTest(BaseTestCase):
             }
         }
     )
-    def test_all_handlers(self, mock_messenger_client_send, mock_celery_send_task):
-        self._test_handlers(mock_messenger_client_send, mock_celery_send_task)
+    def test_all_handlers(self, mock_celery_send_task):
+        self._test_handlers(mock_celery_send_task)
 
-    def _test_handlers(self, mock_messenger_client_send, mock_celery_send_task):
+    def _test_handlers(self, mock_celery_send_task):
         from fb_bot.bot.chat_session import ChatSession
         from fb_bot.bot.ctx import set_chat_context
         from fb_bot.bot import questions
@@ -123,10 +123,10 @@ class FbBotTest(BaseTestCase):
 
             entry_handler = EntryHandler()
 
-            mock_messenger_client_send.side_effect = assert_greetings
+            self.mock_messenger.send.side_effect = assert_greetings
             user_input('Hi')
-            mock_messenger_client_send.assert_called_once()
-            mock_messenger_client_send.side_effect = send_logger
+            self.mock_messenger.send.assert_called_once()
+            self.mock_messenger.send.side_effect = send_logger
 
             user_input('Fine')
             user_input('Iowa')
@@ -146,7 +146,6 @@ class FbBotTest(BaseTestCase):
             self.assertEqual(session.search_request.current_question, None)
 
     @patch('clikhome_fbbot.celery.app.send_task')
-    @patch.object(MessengerClient, 'send')
     @override_settings(
         FBBOT_MSG_EXPIRE=9000,
         CACHES={
@@ -156,16 +155,14 @@ class FbBotTest(BaseTestCase):
             }
         }
     )
-    def test_reusable_chat_sessions(self, mock_messenger_client_send, mock_celery_send_task):
+    def test_reusable_chat_sessions(self, mock_celery_send_task):
         for x in xrange(0, 5):
-            mock_messenger_client_send.reset_mock()
+            self.mock_messenger.reset_mock()
             mock_celery_send_task.reset_mock()
-            self._test_handlers(mock_messenger_client_send, mock_celery_send_task)
-
+            self._test_handlers(mock_celery_send_task)
 
     @patch('clikhome_fbbot.celery.app.send_task')
-    @patch.object(MessengerClient, 'send')
-    def test_bad_answer(self, mock_messenger_client_send, mock_celery_send_task):
+    def test_bad_answer(self, mock_celery_send_task):
         from fb_bot.bot.chat_session import ChatSession
         from fb_bot.bot.ctx import set_chat_context
         from fb_bot.models import PhoneNumber
@@ -174,7 +171,7 @@ class FbBotTest(BaseTestCase):
         def send_logger(message):
             last_send_message = message.message.text
             print 'Send: %r to %r' % (message.message.text, message.recipient.recipient_id)
-        mock_messenger_client_send.side_effect = send_logger
+        self.mock_messenger.send.side_effect = send_logger
 
         with ChatSession('100009095718696') as session, set_chat_context(session):
             user_input = lambda text: entry_handler._handle_message(self.get_wh_message(text), session)

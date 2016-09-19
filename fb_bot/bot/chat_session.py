@@ -65,6 +65,15 @@ class ChatSession(object):
     def attachment_reply(self, attachment):
         return messenger_client.send_attachment_reply(self.user_id, attachment)
 
+    def send_typing_on(self):
+        return messenger_client.messenger.send_typing_on(self.user_id)
+
+    def send_typing_off(self):
+        return messenger_client.messenger.send_typing_off(self.user_id)
+
+    def send_mark_seen(self):
+        return messenger_client.messenger.mark_seen(self.user_id)
+
     def __enter__(self):
         # Check session in local thread first
         local_session = self.local.sessions.get(self.user_id, None)
