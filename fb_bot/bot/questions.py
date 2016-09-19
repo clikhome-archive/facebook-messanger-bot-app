@@ -7,7 +7,8 @@ import re
 from timestring import Range, TimestringInvalid
 
 from clikhome_fbbot.utils import geolocator
-from fb_bot.bot.ctx import session
+from fb_bot.bot import templates
+from fb_bot.bot.ctx import session, search_request
 from fb_bot.models import PhoneNumber
 
 log = logging.getLogger('clikhome_fbbot.%s' % __name__)
@@ -24,6 +25,15 @@ class BaseQuestion(object):
     wait_for_answer = False
 
     @property
+    def class_name(self):
+        return self.__class__.__name__
+
+    @property
+    def postback_choices(self):
+        # choices = map(lambda x: ('{}:{}'.format(self.class_name, x[0]), x[1]), self.answer_choices)
+        return dict(self.answer_choices)
+
+    @property
     def value(self):
         return self.param_value
 
@@ -36,6 +46,14 @@ class BaseQuestion(object):
 
     def set_answer(self, answer):
         raise NotImplemented()
+
+    def bad_answer(self, answer):
+        q = search_request.go_to_question(AskPhoneNumberQuestion)
+        if not q:
+            session.reply(self.answer_bad_message.format(answer=answer))
+        else:
+            q.activate(is_bad_request=True)
+
 
     def __repr__(self):
         return '<%s question="%s" key="%s" answer="%r">' % (
@@ -98,7 +116,7 @@ class BedroomsQuestion(BaseQuestion):
             answer = '0'
 
         if not self.answer_matcher.match(answer):
-            session.reply(self.answer_bad_message.format(answer=answer))
+            self.bad_answer(answer)
         else:
             self.param_value = answer
             self.wait_for_answer = False
@@ -157,16 +175,22 @@ class LeaseStartQuestion(BaseQuestion):
 
 
 class DogWeighAdditionalQuestion(BaseQuestion):
-    answer_matcher = re.compile(r'^yes|no|y|n$', re.IGNORECASE)
+    answer_matcher = re.compile(r'^yes|no$', re.IGNORECASE)
     question = 'Does your dog weigh more than 25 Lbs?'
-    answer_bad_message = 'Sorry, "{answer}" is a bad answer, please choose yes/y or no/n.'
+    answer_bad_message = 'Sorry, "{answer}" is a bad answer, please choose Yes or No'
+    answer_choices = (
+        ('No', 'No'),
+        ('Yes', 'Yes'),
+    )
 
     def __init__(self, parent):
         self.parent = parent
         self.answer = None
 
     def activate(self):
-        session.reply(self.question)
+        session.attachment_reply(
+            templates.make_button_choices(self.question, self.postback_choices)
+        )
         self.wait_for_answer = True
 
     @property
@@ -181,7 +205,7 @@ class DogWeighAdditionalQuestion(BaseQuestion):
     def set_answer(self, answer):
         answer = answer.strip().lower()
         if not self.answer_matcher.match(answer):
-            session.reply(self.answer_bad_message.format(answer=answer))
+            self.bad_answer(answer)
         else:
             self.answer = answer
             self.wait_for_answer = False
@@ -192,10 +216,17 @@ class PetsQuestion(BaseQuestion):
     param_key = 'pets'
     answer_matcher = re.compile(r'^no|dog|cat$', re.IGNORECASE)
     answer_bad_message = 'Sorry, "{answer}" is a bad answer, please choose: No, Dog, Cat'
+    answer_choices = (
+        ('No', 'No'),
+        ('Dog', 'Dog'),
+        ('Cat', 'Cat'),
+    )
     additional_question = None
 
     def activate(self):
-        session.reply(self.question)
+        session.attachment_reply(
+            templates.make_button_choices(self.question, self.postback_choices)
+        )
         self.wait_for_answer = True
 
     @property
@@ -231,15 +262,15 @@ class PetsQuestion(BaseQuestion):
             }
             if self.param_value['pet_type'] == 'dog':
                 self.additional_question = DogWeighAdditionalQuestion(parent=self)
-                session.reply(self.additional_question.question)
+                self.additional_question.activate()
                 self.wait_for_answer = True
             else:
                 self.wait_for_answer = False
 
 
 class AskPhoneNumberQuestion(BaseQuestion):
-    answer_matcher = re.compile(r'^yes|no|y|n$', re.IGNORECASE)
-    answer_bad_message = 'Sorry, "{answer}" is a bad answer, please choose yes/y or no/n.'
+    answer_matcher = re.compile(r'^yes|no$', re.IGNORECASE)
+    answer_bad_message = 'Sorry, "{answer}" is a bad answer, please choose Yes or No'
     question = 'Would you consider this apartment? We want to make sure that we are on the right track.'
     bad_request_text = (
         'I can connect you with our operation manager who will give you more information. '
@@ -247,16 +278,24 @@ class AskPhoneNumberQuestion(BaseQuestion):
         'What is the phone number or email address our operation manager can contact you on?'
         'Thank you, we will be in touch.'
     )
+    answer_choices = (
+        ('yes', 'Yes'),
+        ('no', 'No'),
+    )
+    is_bad_request = False
 
     def activate(self, is_bad_request=False):
         if is_bad_request:
+            self.is_bad_request = True
             session.reply(self.bad_request_text)
         else:
-            session.reply(self.question)
+            session.attachment_reply(
+                templates.make_button_choices(self.question, self.postback_choices)
+            )
         self.wait_for_answer = True
 
     def set_answer(self, answer):
-        if self.answer:
+        if self.answer or self.is_bad_request:
             log.info('Accept phone number: %r' % answer)
             try:
                 PhoneNumber.objects.create(
@@ -267,11 +306,11 @@ class AskPhoneNumberQuestion(BaseQuestion):
             finally:
                 self.wait_for_answer = False
                 session.reply('Thank you. Have a good day.')
-                session.search_request.reset()
+                search_request.reset()
         else:
             answer = answer.strip().lower()
             if not self.answer_matcher.match(answer):
-                session.reply(self.answer_bad_message.format(answer=answer))
+                self.bad_answer(answer)
                 return
 
             self.answer = answer
@@ -312,7 +351,7 @@ class SendApartmentSuggestion(object):
         pass
 
     def activate(self):
-        session.search_request.request_search_results()
+        search_request.request_search_results()
 
 
 def get_questions_list():

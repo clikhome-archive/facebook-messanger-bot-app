@@ -6,20 +6,22 @@ from messengerbot import attachments, elements, templates
 
 
 def make_button_choices(text, choices):
-    postback_buttons = list()
-    for button_text in choices:
-        postback_buttons.append(
-            elements.PostbackButton(
-                title=button_text,
-                payload='USER_DEFINED_PAYLOAD'
-            )
-        )
+    assert isinstance(choices, dict)
+    assert len(choices) <= 3
 
-    template = templates.ButtonTemplate(
-       text=text,
-       buttons=postback_buttons
+    postback_buttons = list()
+    for payload, button_text in choices.iteritems():
+        btn = elements.PostbackButton(
+            title=button_text,
+            payload=payload
+        )
+        postback_buttons.append(btn)
+
+    el = templates.ButtonTemplate(
+        text=text,
+        buttons=postback_buttons
     )
-    return attachments.TemplateAttachment(template=template)
+    return attachments.TemplateAttachment(template=el)
 
 
 def get_results_attachment(listings_data_items, more_url=None):

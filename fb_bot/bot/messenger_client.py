@@ -15,7 +15,7 @@ def send_attachment_reply(recipient, attachment):
         recipient = messages.Recipient(recipient_id=recipient)
     message = messages.Message(attachment=attachment)
     request = messages.MessageRequest(recipient, message)
-    messenger.send(request)
+    return messenger.send(request)
 
 
 def send_message(recipient, text):

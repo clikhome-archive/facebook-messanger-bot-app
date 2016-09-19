@@ -32,6 +32,26 @@ class FbSearchRequest(object):
 
         return self.current_question
 
+    def go_to_question(self, question_class):
+        question = None
+
+        question_to_skip = list()
+        for q in self.questions_unanswered_list:
+            if isinstance(q, question_class):
+                question = q
+                break
+            else:
+                question_to_skip.append(q)
+
+        if question:
+            for q_remove in question_to_skip:
+                self.questions_unanswered_list.remove(q_remove)
+                self.questions_answered_list.append(q_remove)
+
+        if question is not None:
+            self.current_question = question
+        return question
+
     @property
     def filter_params(self):
         result = dict()

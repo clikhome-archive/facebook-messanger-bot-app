@@ -87,9 +87,9 @@ class FbBotTest(BaseTestCase):
             msg._message['text'] = text
         return msg
 
-    def get_message(self, session, text=None):
+    def get_message(self, text=None):
         from fb_bot.bot.message import Message
-        return Message(wh_msg=self.get_wh_message(text), session=session)
+        return Message(wh_msg=self.get_wh_message(text))
 
     @patch('clikhome_fbbot.celery.app.send_task')
     @patch.object(MessengerClient, 'send')
@@ -161,6 +161,33 @@ class FbBotTest(BaseTestCase):
             mock_messenger_client_send.reset_mock()
             mock_celery_send_task.reset_mock()
             self._test_handlers(mock_messenger_client_send, mock_celery_send_task)
+
+
+    @patch('clikhome_fbbot.celery.app.send_task')
+    @patch.object(MessengerClient, 'send')
+    def test_bad_answer(self, mock_messenger_client_send, mock_celery_send_task):
+        from fb_bot.bot.chat_session import ChatSession
+        from fb_bot.bot.ctx import set_chat_context
+        from fb_bot.models import PhoneNumber
+
+        last_send_message = None
+        def send_logger(message):
+            last_send_message = message.message.text
+            print 'Send: %r to %r' % (message.message.text, message.recipient.recipient_id)
+        mock_messenger_client_send.side_effect = send_logger
+
+        with ChatSession('100009095718696') as session, set_chat_context(session):
+            user_input = lambda text: entry_handler._handle_message(self.get_wh_message(text), session)
+            entry_handler = EntryHandler()
+
+            user_input('Hi')
+            user_input('Fine')
+            user_input('Iowa')
+            user_input('any')
+
+            phone_number = '+155555556'
+            user_input(phone_number)
+            self.assertGreaterEqual(PhoneNumber.objects.filter(phone=phone_number).count(), 1)
 
     def test_session_local(self):
         from fb_bot.bot.chat_session import ChatSession

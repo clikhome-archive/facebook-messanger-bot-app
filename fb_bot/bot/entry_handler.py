@@ -43,8 +43,16 @@ class EntryHandler(object):
         """
         :type msg: WebhookMessaging
         """
-        assert msg.is_message
-        text = msg._message['text']
+
+        text_log = None
+
+        if msg.is_message:
+            text_log = text = msg._message['text']
+        elif msg.is_postback:
+            text = msg._postback['payload']
+            text_log = 'POST_BACK: %r' % text
+        else:
+            raise Exception('Unexpected message %r' % msg)
 
         now = datetime.datetime.utcnow()
         delta = (now - msg.timestamp)
@@ -55,7 +63,7 @@ class EntryHandler(object):
                 recipient=msg.sender.recipient_id,
                 type='in',
                 errors=log_message,
-                text=text
+                text=text_log
             )
             log.warn(log_message)
             return
@@ -63,28 +71,27 @@ class EntryHandler(object):
         ChatLog.objects.create(
             recipient=msg.sender.recipient_id,
             type='in',
-            text=text
+            text=text_log
         )
-        msg_obj = Message(msg, session)
-        with msg_obj.session as session:
-            respond = self.aiml_respond(text)
-            if respond:
-                session.reply(respond.strip().replace('  ', ' '))
-                return
+        msg_obj = Message(msg)
+        respond = self.aiml_respond(text)
+        if respond:
+            session.reply(respond.strip().replace('  ', ' '))
+            return
 
-            for cb, _ in self._get_receivers(msg_obj.text):
-                cb = cb or self.default_handler
-                try:
-                    sr = session.search_request
-                    # if sr.is_waiting_for_results and not msg_obj.text.startswith(('@', '!')):
-                    #     log.warn('Drop message %r when is_waiting_for_results=True' % msg_obj)
-                    #     continue
-                    log.debug('Call %s:%s with text %r' % (cb.__name__, sr.current_question.__class__.__name__, text))
-                    handler_before_call.send(self, handler_cb=cb, message=msg_obj, text=text)
-                    cb(msg_obj)
-                except Exception, e:
-                    raven_client.captureException()
-                    log.exception(dict(cb=cb, text=text, user_id=msg_obj.sender_id))
+        for cb, _ in self._get_receivers(msg_obj.text):
+            cb = cb or self.default_handler
+            try:
+                sr = session.search_request
+                # if sr.is_waiting_for_results and not msg_obj.text.startswith(('@', '!')):
+                #     log.warn('Drop message %r when is_waiting_for_results=True' % msg_obj)
+                #     continue
+                log.debug('Call %s:%s with text %r' % (cb.__name__, sr.current_question.__class__.__name__, text))
+                handler_before_call.send(self, handler_cb=cb, message=msg_obj, text=text)
+                cb(msg_obj)
+            except Exception, e:
+                raven_client.captureException()
+                log.exception(dict(cb=cb, text=text, user_id=msg_obj.sender_id))
 
     def _get_receivers(self, text):
         has_matching = False
@@ -129,20 +136,13 @@ class EntryHandler(object):
             self._handle_message(entry, session)
 
     @classmethod
-    def add_to_queue(cls, message_entries, async=True):
+    def add_to_queue(cls, entry, async=True):
+        sender_id = entry.sender.recipient_id
         if async:
-            queues = dict()
-
-            for sender_id, messages in message_entries.items():
-                queues.setdefault(sender_id, None)
-                queue_name = 'fb-bot-chat-%s' % sender_id
-                if not queues[sender_id]:
-                    queues[sender_id] = HotQueue(queue_name, connection_pool=redis_connection_pool)
-                queues[sender_id].put(*messages)
-                handle_entry_queue.delay(queue_name)
+            queue = HotQueue('fb-bot-chat-%s' % sender_id, connection_pool=redis_connection_pool)
+            queue.put(entry)
+            handle_entry_queue.delay(queue.name)
         else:
-            for sender_id, messages in message_entries.items():
-                for msg in messages:
-                    entry_handler.handle_entry_sync(msg, sender_id)
+            entry_handler.handle_entry_sync(entry, sender_id)
 
 entry_handler = EntryHandler()
