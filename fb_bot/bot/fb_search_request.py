@@ -2,6 +2,7 @@
 from __future__ import absolute_import
 import logging
 
+from raven.contrib.django.raven_compat.models import client as raven_client
 from fb_bot.bot.questions import get_questions_list, BaseQuestion
 from fb_bot import shared_tasks
 
@@ -50,6 +51,10 @@ class FbSearchRequest(object):
 
         if question is not None:
             self.current_question = question
+        else:
+            log.warn('Cant change question')
+            raven_client.captureMessage("Cant change question")
+
         return question
 
     @property

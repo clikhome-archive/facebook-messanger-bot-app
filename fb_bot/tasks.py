@@ -11,8 +11,9 @@ def handle_entry_queue(queue_name):
 
 @celery.task(ignore_result=True, max_retries=0, queue='fb-bot', expires=30)
 def return_simple_search_results(user_id, listings):
-    from fb_bot.bot.ctx import set_chat_context
+    from fb_bot.bot.ctx import set_chat_context, search_request
     from fb_bot.bot.chat_session import ChatSession
+    from fb_bot.bot import questions
     from fb_bot.bot import templates
     from fb_bot.bot.handlers import log
 
@@ -27,6 +28,10 @@ def return_simple_search_results(user_id, listings):
             sr.next_question().activate()
         else:
             log.debug('No results for %s' % sr)
-            session.reply("Sorry, we can't find any listing with this criteria.")
-            sr.next_question().activate(is_bad_request=True)
+            q = search_request.go_to_question(questions.AskPhoneNumberQuestion)
+            if q:
+                q.activate(is_bad_request=True)
+            else:
+                session.reply("Sorry, we can't find any listing with this criteria.")
+
         session.send_typing_off()

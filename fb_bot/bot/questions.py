@@ -142,7 +142,7 @@ class PriceQuestion(BaseQuestion):
         # TODO: accept ranges
         answer = re.sub('\D+', '', answer)
         if not self.answer_matcher.match(answer):
-            session.reply(self.answer_bad_message.format(answer=answer))
+            self.bad_answer(answer)
         else:
             self.param_value = answer
             self.wait_for_answer = False
@@ -177,7 +177,7 @@ class LeaseStartQuestion(BaseQuestion):
             value = Range(answer)
             self.param_value = map(lambda d: d.date, value._dates)
         except TimestringInvalid:
-            session.reply(self.answer_bad_message.format(answer=answer))
+            self.bad_answer(answer)
         else:
             self.wait_for_answer = False
 
@@ -254,7 +254,7 @@ class PetsQuestion(BaseQuestion):
             return
 
         if not self.answer_matcher.match(answer):
-            session.reply(self.answer_bad_message.format(answer=answer))
+            self.bad_answer(answer)
             return
 
         pet_type = answer.strip().lower()
