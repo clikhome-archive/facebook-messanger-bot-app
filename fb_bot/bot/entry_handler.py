@@ -14,7 +14,7 @@ import aiml
 from fb_bot.bot.chat_lock import ChatLock
 from fb_bot.bot.chat_session import ChatSession
 from fb_bot.bot.globals import redis_connection_pool
-from fb_bot.bot.ctx import set_chat_context
+from fb_bot.bot.ctx import set_chat_context, search_request
 from fb_bot.bot.manager import Manager
 from fb_bot.bot.message import Message
 from fb_bot.bot.signals import handler_before_call
@@ -77,6 +77,8 @@ class EntryHandler(object):
         respond = self.aiml_respond(text)
         if respond:
             session.reply(respond.strip().replace('  ', ' '))
+            if search_request.current_question and search_request.current_question.wait_for_answer:
+                search_request.current_question.activate()
             return
 
         for cb, _ in self._get_receivers(msg_obj.text):
