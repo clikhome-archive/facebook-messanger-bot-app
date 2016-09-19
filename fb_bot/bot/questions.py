@@ -165,6 +165,14 @@ class LeaseStartQuestion(BaseQuestion):
         return dict(lease_range=self.param_value)
 
     def set_answer(self, answer):
+        answer = answer.strip().lower()
+        if answer in (
+            'asap',
+            'as soon as possible', 'as fast as possible', 'as quick(quickly) as possible',
+            'as quick as possible', 'as quickly as possible'
+        ):
+            answer = 'now'
+
         try:
             value = Range(answer)
             self.param_value = map(lambda d: d.date, value._dates)
