@@ -1,33 +1,54 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
-
-from django.utils.text import Truncator
-from messengerbot import attachments, elements, templates
+import requests
 
 
-def get_results_attachment(listings_data_items, more_url):
-    tpl_elements = list()
-    for listing_d in listings_data_items:
-        element_kwargs = dict(
-            title=Truncator(listing_d['title']).chars(44),
-            subtitle=Truncator(listing_d['fmt_address']).chars(79),
-            # item_url=more_url,
-            buttons=[
-                elements.WebUrlButton(
-                    title='View more',
-                    url=more_url,
-                ),
-                elements.WebUrlButton(
-                    title='View this listing',
-                    url=listing_d['listing_url'],
-                )
+class CallToActions(object):
+    payload = 'USER_DEFINED_PAYLOAD:GET_STARTED'
+
+    @classmethod
+    def setup(cls):
+        from fb_bot.bot.messenger_client import messenger
+        params = {
+            'access_token': messenger.access_token
+        }
+        data = {
+            "setting_type": "call_to_actions",
+            "thread_state": "new_thread",
+            "call_to_actions": [
+                {
+                    "payload": cls.payload
+                }
             ]
+        }
+        response = requests.post(
+            '%s/thread_settings' % messenger.GRAPH_API_URL,
+            params=params,
+            json=data
         )
-        image_url = listing_d.get('image_url', None)
-        if image_url:
-            element_kwargs['image_url'] = image_url
-        element = elements.Element(**element_kwargs)
-        tpl_elements.append(element)
+        if response.status_code != 200:
+            raise Exception(
+                response.json()['error']
+            )
+        return response.json()
 
-    template = templates.GenericTemplate(tpl_elements)
-    return attachments.TemplateAttachment(template=template)
+    @classmethod
+    def remove(cls):
+        from fb_bot.bot.messenger_client import messenger
+        params = {
+            'access_token': messenger.access_token
+        }
+        data = {
+          "setting_type": "call_to_actions",
+          "thread_state": "new_thread"
+        }
+        response = requests.delete(
+            '%s/thread_settings' % messenger.GRAPH_API_URL,
+            params=params,
+            json=data
+        )
+        if response.status_code != 200:
+            raise Exception(
+                response.json()['error']
+            )
+        print response.content

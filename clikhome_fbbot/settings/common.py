@@ -29,12 +29,12 @@ class DjangoCommon(Configuration):
 
     # Application definition
     INSTALLED_APPS = (
-        # 'django.contrib.admin',
-        # 'django.contrib.auth',
-        # 'django.contrib.contenttypes',
-        # 'django.contrib.sessions',
-        # 'django.contrib.messages',
-        # 'django.contrib.staticfiles',
+        'django.contrib.admin',
+        'django.contrib.auth',
+        'django.contrib.contenttypes',
+        'django.contrib.sessions',
+        'django.contrib.messages',
+        'django.contrib.staticfiles',
 
         'raven.contrib.django.raven_compat',
         'django_extensions',
@@ -45,12 +45,12 @@ class DjangoCommon(Configuration):
     )
 
     MIDDLEWARE_CLASSES = (
-        # 'django.contrib.sessions.middleware.SessionMiddleware',
+        'django.contrib.sessions.middleware.SessionMiddleware',
         'django.middleware.common.CommonMiddleware',
-        # 'django.middleware.csrf.CsrfViewMiddleware',
-        # 'django.contrib.auth.middleware.AuthenticationMiddleware',
-        # 'django.contrib.auth.middleware.SessionAuthenticationMiddleware',
-        # 'django.contrib.messages.middleware.MessageMiddleware',
+        'django.middleware.csrf.CsrfViewMiddleware',
+        'django.contrib.auth.middleware.AuthenticationMiddleware',
+        'django.contrib.auth.middleware.SessionAuthenticationMiddleware',
+        'django.contrib.messages.middleware.MessageMiddleware',
         'django.middleware.clickjacking.XFrameOptionsMiddleware',
         'django.middleware.security.SecurityMiddleware',
     )
@@ -104,6 +104,7 @@ class DjangoCommon(Configuration):
     # Static files (CSS, JavaScript, Images)
     # https://docs.djangoproject.com/en/1.8/howto/static-files/
     STATIC_URL = '/static/'
+    STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
     @property
     def RAVEN_CONFIG(self):
@@ -140,7 +141,7 @@ class CeleryCommon(Configuration):
     CELERY_ACCEPT_CONTENT = ['pickle', 'json', 'msgpack', 'yaml']
     CELERY_RESULT_SERIALIZER = 'json'
     CELERY_SEND_EVENTS = True
-
+    CELERYD_CONCURRENCY = os.environ.get('CELERYD_CONCURRENCY', 10)
     CELERYD_LOG_FORMAT = """
         [%(asctime)s: %(levelname)s/%(processName)s/%(threadName)s] %(message)s
     """.strip()
@@ -165,6 +166,7 @@ class AppsCommon(Configuration):
     )
     FBBOT_MSG_EXPIRE = 10
     GOOGLE_GEOCODER_API_KEY = EnvVal('GOOGLE_GEOCODER_API_KEY')
+    CHAT_SESSION_TIMEOUT = os.getenv('CHAT_SESSION_TIMEOUT', 3600)
 
 
 class Common(DjangoCommon, CeleryCommon, AppsCommon):

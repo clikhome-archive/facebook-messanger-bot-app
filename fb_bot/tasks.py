@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
-
 import celery
 
 
@@ -11,6 +10,28 @@ def handle_entry_queue(queue_name):
 
 
 @celery.task(ignore_result=True, max_retries=0, queue='fb-bot', expires=30)
-def return_search_results(user_id, more_url, listings):
-    from fb_bot.bot.handlers import send_results
-    send_results(user_id=user_id, more_url=more_url, listings=listings)
+def return_simple_search_results(user_id, listings):
+    from fb_bot.bot.ctx import set_chat_context, search_request
+    from fb_bot.bot.chat_session import ChatSession
+    from fb_bot.bot import questions
+    from fb_bot.bot import templates
+    from fb_bot.bot.handlers import log
+
+    with ChatSession(user_id) as session, set_chat_context(session):
+        sr = session.search_request
+        sr.is_waiting_for_results = False
+        session.send_typing_on()
+        if listings:
+            attachment = templates.get_results_attachment(listings)
+            session.attachment_reply(attachment)
+            log.debug('Return results for %s' % sr)
+            sr.next_question().activate()
+        else:
+            log.debug('No results for %s' % sr)
+            q = search_request.go_to_question(questions.AskPhoneNumberQuestion)
+            if q:
+                q.activate(is_bad_request=True)
+            else:
+                session.reply("Sorry, we can't find any listing with this criteria.")
+
+        session.send_typing_off()
