@@ -31,7 +31,7 @@ class BaseQuestion(object):
     @property
     def postback_choices(self):
         # choices = map(lambda x: ('{}:{}'.format(self.class_name, x[0]), x[1]), self.answer_choices)
-        return dict(self.answer_choices)
+        return self.answer_choices
 
     @property
     def value(self):

@@ -6,11 +6,10 @@ from messengerbot import attachments, elements, templates
 
 
 def make_button_choices(text, choices):
-    assert isinstance(choices, dict)
     assert len(choices) <= 3
 
     postback_buttons = list()
-    for payload, button_text in choices.iteritems():
+    for payload, button_text in choices:
         btn = elements.PostbackButton(
             title=button_text,
             payload=payload
