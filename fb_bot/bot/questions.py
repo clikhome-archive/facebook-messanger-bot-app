@@ -95,7 +95,7 @@ class LocationQuestion(BaseQuestion):
 
 
 class BedroomsQuestion(BaseQuestion):
-    question = 'Ok, how many bedrooms do you need?'
+    question = 'How many bedrooms do you need?'
     param_key = 'bedrooms'
     answer_matcher = re.compile('^\d+$', re.IGNORECASE)
 
@@ -280,17 +280,22 @@ class AskPhoneNumberQuestion(BaseQuestion):
     answer_matcher = re.compile(r'^yes|no$', re.IGNORECASE)
     answer_bad_message = 'Sorry, "{answer}" is a bad answer, please choose Yes or No'
     question = 'Would you consider this apartment? We want to make sure that we are on the right track.'
-    bad_request_text = (
-        'I can connect you with our operation manager who will give you more information. '
-        'I apologize for any inconvenience. '
-        'What is the phone number or email address our operation manager can contact you on?'
-        'Thank you, we will be in touch.'
-    )
     answer_choices = (
         ('yes', 'Yes'),
         ('no', 'No'),
     )
     is_bad_request = False
+
+    @property
+    def bad_request_text(self):
+        text = (
+            'I can connect you with our operation manager who will give you more information. '
+            'I apologize for any inconvenience. '
+            'What is the phone number or email address our operation manager can contact you on?'
+        )
+        if not self.is_bad_request:
+            text += 'Thank you, we will be in touch.'
+        return text
 
     def activate(self, is_bad_request=False):
         if is_bad_request:
@@ -313,7 +318,10 @@ class AskPhoneNumberQuestion(BaseQuestion):
                 )
             finally:
                 self.wait_for_answer = False
-                session.reply('Thank you. Have a good day.')
+                if self.is_bad_request:
+                    session.reply('Thank you, we will be in touch.')
+                else:
+                    session.reply('Thank you. Have a good day.')
                 search_request.reset()
         else:
             answer = answer.strip().lower()
@@ -331,8 +339,8 @@ class AskPhoneNumberQuestion(BaseQuestion):
             elif self.answer == 'no':
                 session.reply(
                     'No problem, we will process your request and our operation manager '
-                    'will get back to you with apartment recommendations that better fit your criteria.'
-                    ' What is your phone number and email address we can contact you on?'
+                    'will get back to you with apartment recommendations that better fit your criteria. '
+                    'What is your phone number and email address we can contact you on?'
                 )
 
 
