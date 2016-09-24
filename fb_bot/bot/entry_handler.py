@@ -7,6 +7,7 @@ from threading import Lock
 
 import redis
 from django.conf import settings
+from django.utils import timezone
 from hotqueue import HotQueue
 from raven.contrib.django.raven_compat.models import client as raven_client
 import aiml
@@ -18,7 +19,7 @@ from fb_bot.bot.ctx import set_chat_context, search_request
 from fb_bot.bot.manager import Manager
 from fb_bot.bot.message import Message
 from fb_bot.bot.signals import handler_before_call
-from fb_bot.models import ChatLog
+from fb_bot import models
 from fb_bot.tasks import handle_entry_queue
 
 log = logging.getLogger('clikhome_fbbot.%s' % __name__)
@@ -29,6 +30,10 @@ class EntryHandler(object):
 
     def __init__(self):
         from fb_bot.bot import handlers
+        self.mute_period = settings.FBBOT_MUTE_PERIOD
+        if self.mute_period is not None:
+            self.mute_period = int(self.mute_period)
+
         self.default_handler = handlers.default_handler
         self.current_session = None
         self.sync_lock = Lock()
@@ -54,13 +59,15 @@ class EntryHandler(object):
         else:
             raise Exception('Unexpected message %r' % msg)
 
+        chat = models.Chat.objects.filter(id=session.chat_id).get()
+
         now = datetime.datetime.utcnow()
         delta = (now - msg.timestamp)
         if delta.seconds >= settings.FBBOT_MSG_EXPIRE:
             log_message = 'Drop expired message, delta={delta}, limit={limit}'.format(delta=delta.seconds,
                                                                                       limit=settings.FBBOT_MSG_EXPIRE)
-            ChatLog.objects.create(
-                recipient=msg.sender.recipient_id,
+            models.ChatLog.objects.create(
+                chat=chat,
                 type='in',
                 errors=log_message,
                 text=text_log
@@ -68,8 +75,26 @@ class EntryHandler(object):
             log.warn(log_message)
             return
 
-        ChatLog.objects.create(
-            recipient=msg.sender.recipient_id,
+        if self.mute_period and chat.muted_at:
+            mute_delta = (timezone.now() - chat.muted_at)
+            if mute_delta.seconds < self.mute_period:
+                mute_left = self.mute_period - mute_delta.seconds
+                log_message = 'Ignore muted message, seconds to disable mute %s' % mute_left
+                log.debug(log_message)
+                models.ChatLog.objects.create(
+                    chat=chat,
+                    type='in',
+                    errors=log_message,
+                    text=text_log
+                )
+            else:
+                log.debug('Remove muted_at for %r' % chat)
+                chat.muted_at = None
+                chat.save()
+            return
+
+        models.ChatLog.objects.create(
+            chat=chat,
             type='in',
             text=text_log
         )

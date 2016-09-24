@@ -4,10 +4,12 @@ import json
 import logging
 
 import re
+from django.utils import timezone
 from timestring import Range, TimestringInvalid
 
 from clikhome_fbbot.utils import geolocator
 from fb_bot.bot import templates
+from fb_bot import models
 from fb_bot.bot.ctx import session, search_request
 from fb_bot.models import PhoneNumber
 
@@ -322,6 +324,7 @@ class AskPhoneNumberQuestion(BaseQuestion):
                     session.reply('Thank you, we will be in touch.')
                 else:
                     session.reply('Thank you. Have a good day.')
+                models.Chat.objects.filter(id=session.chat_id).update(muted_at=timezone.now())
                 search_request.reset()
         else:
             answer = answer.strip().lower()

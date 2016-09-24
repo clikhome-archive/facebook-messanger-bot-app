@@ -157,6 +157,7 @@ class AppsCommon(Configuration):
     # Facebook Messenger bot
     FBBOT_PAGE_ACCESS_TOKEN = EnvVal('FBBOT_PAGE_ACCESS_TOKEN')
     FBBOT_VERIFY_TOKEN = EnvVal('FBBOT_VERIFY_TOKEN')
+    FBBOT_MUTE_PERIOD = os.getenv('FBBOT_MUTE_PERIOD', None)
     FBBOT_ADMINS_IDS = values.Value(
         environ_name='FBBOT_ADMINS_IDS',
         environ_required=False,

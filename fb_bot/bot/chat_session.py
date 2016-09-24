@@ -6,6 +6,7 @@ import threading
 from django.conf import settings
 from django.core.cache import caches
 from facebook import GraphAPI
+from fb_bot import models
 from fb_bot.bot import messenger_client
 from fb_bot.bot.fb_search_request import FbSearchRequest
 
@@ -17,8 +18,15 @@ class ChatSession(object):
     graph_api_class = GraphAPI
     local = threading.local()
 
-    def __init__(self, user_id):
+    def __init__(self, user_id, chat_id=None):
         self.user_id = str(user_id)
+
+        if not chat_id:
+            chat, created = models.Chat.objects.get_or_create(fb_user_id=self.user_id)
+            self.chat_id = chat.pk
+        else:
+            self.chat_id = chat_id
+
         self.lock_key = CACHE_PREFIX + '-lock-chat-with-%s' % user_id
         self.cache_key = CACHE_PREFIX + '-chat-session-%s' % user_id
         self.cache = caches['default']
