@@ -1,5 +1,5 @@
 from django.contrib import admin
-from fb_bot.models import PhoneNumber, ChatLog
+from fb_bot import models
 
 
 class PhoneNumberAdmin(admin.ModelAdmin):
@@ -13,13 +13,13 @@ class PhoneNumberAdmin(admin.ModelAdmin):
     list_filter = (
         'sender',
     )
-admin.site.register(PhoneNumber, PhoneNumberAdmin)
+admin.site.register(models.PhoneNumber, PhoneNumberAdmin)
 
 
 class ChatLogAdmin(admin.ModelAdmin):
     list_display = (
         'id',
-        'recipient',
+        'chat',
         'text',
         'type',
         'question_class',
@@ -27,7 +27,21 @@ class ChatLogAdmin(admin.ModelAdmin):
         'created',
     )
     list_filter = (
-        'recipient',
+        'chat',
+        'created',
         'type',
     )
-admin.site.register(ChatLog, ChatLogAdmin)
+admin.site.register(models.ChatLog, ChatLogAdmin)
+
+
+class ChatAdmin(admin.ModelAdmin):
+    list_display = (
+        'id',
+        'fb_user_id',
+        'muted_at',
+        'created',
+    )
+    list_filter = (
+        'created',
+    )
+admin.site.register(models.Chat, ChatAdmin)
