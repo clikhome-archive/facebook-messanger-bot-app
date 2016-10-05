@@ -1,4 +1,5 @@
 from django.contrib import admin
+
 from fb_bot import models
 
 
@@ -39,9 +40,11 @@ class ChatAdmin(admin.ModelAdmin):
         'id',
         'fb_user_id',
         'muted_at',
+        'mute_expire',
         'created',
     )
     list_filter = (
         'created',
     )
+
 admin.site.register(models.Chat, ChatAdmin)
