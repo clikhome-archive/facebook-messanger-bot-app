@@ -34,8 +34,9 @@ class Chat(TimeStampedModel):
     @property
     def mute_expire(self):
         if self.muted_at and settings.FBBOT_MUTE_PERIOD:
+            mute_period = int(settings.FBBOT_MUTE_PERIOD)
             now = timezone.now()
-            mute_expire_at = self.muted_at + timedelta(seconds=settings.FBBOT_MUTE_PERIOD)
+            mute_expire_at = self.muted_at + timedelta(seconds=mute_period)
             if now > mute_expire_at:
                 return
             else:
