@@ -78,20 +78,22 @@ class EntryHandler(object):
         if self.mute_period and chat.muted_at:
             mute_delta = (timezone.now() - chat.muted_at)
             if mute_delta.seconds < self.mute_period:
-                mute_left = self.mute_period - mute_delta.seconds
-                log_message = 'Ignore muted message, seconds to disable mute %s' % mute_left
-                log.debug(log_message)
-                models.ChatLog.objects.create(
-                    chat=chat,
-                    type='in',
-                    errors=log_message,
-                    text=text_log
-                )
+                if text.lower() != 'restart':
+                    mute_left = self.mute_period - mute_delta.seconds
+                    log_message = 'Ignore muted message, seconds to disable mute %s' % mute_left
+                    log.debug(log_message)
+                    models.ChatLog.objects.create(
+                        chat=chat,
+                        type='in',
+                        errors=log_message,
+                        text=text_log
+                    )
+                    return
+                else:
+                    chat.muted_at = None
+                    chat.save()
             else:
                 log.debug('Remove muted_at for %r' % chat)
-                chat.muted_at = None
-                chat.save()
-            return
 
         models.ChatLog.objects.create(
             chat=chat,

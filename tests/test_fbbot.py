@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
-import datetime
+from datetime import datetime, timedelta
 from unittest import skip
+from freezegun import freeze_time
 
 import os
 import json
@@ -71,7 +72,7 @@ class FbBotTest(BaseTestCase):
 
     def get_wh_message(self, text=None):
         from messengerbot.webhooks import WebhookEntry
-        now = int(datetime.datetime.utcnow().strftime('%s'))*1000
+        now = int(datetime.utcnow().strftime('%s'))*1000
 
         def update_timestamp(msg):
             msg['timestamp'] = now
@@ -200,4 +201,105 @@ class FbBotTest(BaseTestCase):
 
         with ChatSession('100009095718696') as s1:
             self.assertEqual(s1._session_usage, 1)
+
+    @patch('clikhome_fbbot.celery.app.send_task')
+    @override_settings(
+        FBBOT_MSG_EXPIRE=9000,
+        FBBOT_MUTE_PERIOD=60,
+        CACHES={
+            'default': {
+                'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+                'LOCATION': 'unique-snowflake'
+            }
+        }
+    )
+    def test_mute(self, mock_celery_send_task):
+        from fb_bot.bot.chat_session import ChatSession
+        from fb_bot.bot.ctx import set_chat_context
+        from fb_bot.models import PhoneNumber, Chat
+
+        with ChatSession('100009095718696') as session, set_chat_context(session):
+            user_input = lambda text: entry_handler._handle_message(self.get_wh_message(text), session)
+
+            entry_handler = EntryHandler()
+
+            def send_logger(message):
+                print 'Send: %r to %r' % (message.message.text, message.recipient.recipient_id)
+
+            user_input('Hi')
+            self.mock_messenger.send.side_effect = send_logger
+
+            user_input('Fine')
+            user_input('Iowa')
+            user_input('studio')
+            user_input('9000')
+            user_input('today')
+            user_input('no')
+
+            mock_celery_send_task.assert_called_once()
+
+            user_input('yes')
+            phone_number = '+155555555'
+            user_input(phone_number)
+            self.assertGreaterEqual(PhoneNumber.objects.filter(phone=phone_number).count(), 1)
+            self.assertGreater(Chat.objects.filter(fb_user_id=session.user_id).count(), 0)
+            self.mock_messenger.reset_mock()
+            self.mock_messenger.send.side_effect = send_logger
+            user_input('Hi again')
+            self.assertFalse(self.mock_messenger.send.called)
+
+            with freeze_time(datetime.utcnow() + timedelta(seconds=61)):
+                user_input('Hi again 2')
+                user_input('Fine')
+                self.assertEqual(self.mock_messenger.send.call_count, 2)
+
+
+    @patch('clikhome_fbbot.celery.app.send_task')
+    @override_settings(
+        FBBOT_MSG_EXPIRE=9000,
+        FBBOT_MUTE_PERIOD=60,
+        CACHES={
+            'default': {
+                'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+                'LOCATION': 'unique-snowflake'
+            }
+        }
+    )
+    def test_unmute_by_restart(self, mock_celery_send_task):
+        from fb_bot.bot.chat_session import ChatSession
+        from fb_bot.bot.ctx import set_chat_context
+        from fb_bot.models import PhoneNumber, Chat
+
+        with ChatSession('100009095718696') as session, set_chat_context(session):
+            user_input = lambda text: entry_handler._handle_message(self.get_wh_message(text), session)
+
+            entry_handler = EntryHandler()
+
+            def send_logger(message):
+                print 'Send: %r to %r' % (message.message.text, message.recipient.recipient_id)
+
+            user_input('Hi')
+            self.mock_messenger.send.side_effect = send_logger
+
+            user_input('Fine')
+            user_input('Iowa')
+            user_input('studio')
+            user_input('9000')
+            user_input('today')
+            user_input('no')
+
+            mock_celery_send_task.assert_called_once()
+
+            user_input('yes')
+            phone_number = '+155555555'
+            user_input(phone_number)
+            self.assertGreaterEqual(PhoneNumber.objects.filter(phone=phone_number).count(), 1)
+            self.assertGreater(Chat.objects.filter(fb_user_id=session.user_id).count(), 0)
+            self.mock_messenger.reset_mock()
+            self.mock_messenger.send.side_effect = send_logger
+            user_input('Hi again')
+            self.assertFalse(self.mock_messenger.send.called)
+
+            user_input('restart')
+            self.assertEqual(self.mock_messenger.send.call_count, 1)
 
